@@ -9,8 +9,10 @@ layer that generates IaC from intent.
 
 ## Pages on this site
 
-- [Architecture deep dive](https://dmiruke.dev/index.html) — components, IRSA web, phase model, problems & solutions
-- [Build story](https://dmiruke.dev/blog-cluster-build-story.html) — the plan, the bugs, and the fixes across sessions 1–6
+- [Architecture deep dive](https://dmiruke-ai.github.io/dmiruke.github.io/index.html) — components, IRSA web, phase model, problems & solutions
+- [Build story](https://dmiruke-ai.github.io/dmiruke.github.io/blog-cluster-build-story.html) — the plan, the bugs, and the fixes across sessions 1–6
+
+> Custom domain (`dmiruke.dev`) pending DNS propagation. The github.io links above work now.
 
 ## Source code
 
