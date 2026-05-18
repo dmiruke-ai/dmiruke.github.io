@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Standing Up a Platform Engineering Lab on EKS — Build Story</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-soft: #161922;
+    --bg-card: #1c2030;
+    --border: #2a2f3e;
+    --fg: #e6e8ee;
+    --fg-dim: #9da4b3;
+    --fg-muted: #6c7385;
+    --accent: #6aa7ff;
+    --accent-soft: #2c5aa033;
+    --green: #5fc77a;
+    --amber: #f0b95c;
+    --red: #f06c6c;
+    --code-bg: #0a0c12;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    line-height: 1.7;
+    font-size: 15.5px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--bg-soft); border-right: 1px solid var(--border);
+    padding: 32px 24px;
+    font-size: 13px;
+  }
+  nav.toc h1 { font-size: 14px; margin: 0 0 8px; color: var(--fg); letter-spacing: 0.3px; }
+  nav.toc .sub { color: var(--fg-muted); font-size: 11px; margin: 0 0 24px; }
+  nav.toc .back { display: block; margin-bottom: 20px; font-size: 12px; color: var(--fg-dim); }
+  nav.toc .back:hover { color: var(--accent); text-decoration: none; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: section; }
+  nav.toc ol li { counter-increment: section; margin: 4px 0; }
+  nav.toc ol li a {
+    color: var(--fg-dim); display: block; padding: 6px 10px;
+    border-radius: 4px; transition: all 0.15s;
+  }
+  nav.toc ol li a::before { content: counter(section) ". "; color: var(--fg-muted); }
+  nav.toc ol li a:hover { background: var(--bg-card); color: var(--fg); text-decoration: none; }
+
+  main { padding: 40px 56px; max-width: 920px; }
+
+  header.hero {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px;
+    margin-bottom: 40px;
+  }
+  header.hero h1 {
+    font-size: 30px; margin: 0 0 8px;
+    background: linear-gradient(120deg, var(--accent), #b48cff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1.25;
+  }
+  header.hero .tagline { color: var(--fg-dim); font-size: 16px; margin: 8px 0 18px; }
+  header.hero .meta { display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; color: var(--fg-muted); }
+  header.hero .meta span strong { color: var(--fg); font-weight: 500; }
+  header.hero .byline { color: var(--fg-dim); font-size: 13px; margin: 0; font-style: italic; }
+
+  section { margin-bottom: 56px; scroll-margin-top: 20px; }
+  section h2 {
+    font-size: 22px; margin: 0 0 12px;
+    color: var(--fg); letter-spacing: 0.2px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  section h2 .num { color: var(--accent); margin-right: 10px; font-weight: 500; }
+  section h3 { font-size: 17px; margin: 28px 0 10px; color: var(--fg); }
+  section h4 { font-size: 14px; margin: 20px 0 8px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.6px; }
+  section p { margin: 14px 0; color: var(--fg); }
+  section ul, section ol { padding-left: 22px; }
+  section li { margin: 6px 0; }
+
+  pre, code { font-family: var(--font-mono); }
+  code { background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.92em; color: #cfd5e3; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    padding: 16px 18px; border-radius: 6px; overflow-x: auto;
+    font-size: 12.5px; line-height: 1.55; margin: 16px 0;
+  }
+  pre code { background: transparent; padding: 0; }
+  pre.diagram { font-size: 11.5px; line-height: 1.4; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+    font-size: 13.5px;
+  }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--bg-soft); color: var(--fg-dim); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:hover td { background: var(--bg-soft); }
+
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .badge.healthy { background: #1f3d29; color: var(--green); }
+  .badge.warn    { background: #3d3220; color: var(--amber); }
+  .badge.broken  { background: #3d2020; color: var(--red); }
+  .badge.info    { background: var(--accent-soft); color: var(--accent); }
+
+  blockquote {
+    margin: 18px 0; padding: 12px 20px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-card); border-radius: 0 6px 6px 0;
+    color: var(--fg-dim); font-style: italic;
+  }
+  blockquote p { margin: 4px 0; }
+
+  figure.screenshot {
+    margin: 24px 0; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; text-align: center;
+  }
+  figure.screenshot img {
+    max-width: 100%; height: auto; border-radius: 4px;
+    border: 1px solid var(--border); display: block; margin: 0 auto;
+  }
+  figure.screenshot .placeholder {
+    min-height: 200px; background:
+      repeating-linear-gradient(45deg, #1a1d28, #1a1d28 10px, #1e2230 10px, #1e2230 20px);
+    border: 1px dashed var(--border); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: var(--fg-muted); font-family: var(--font-mono); font-size: 12px; padding: 24px;
+  }
+  figure.screenshot .placeholder .file { color: var(--accent); font-size: 13px; margin-top: 8px; word-break: break-all; }
+  figure.screenshot figcaption {
+    font-size: 12.5px; color: var(--fg-dim); margin-top: 10px; padding: 0 16px;
+  }
+  figure.screenshot figcaption strong { color: var(--fg); }
+
+  .gallery {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px; margin: 16px 0;
+  }
+  .gallery figure.screenshot { margin: 0; padding: 8px; }
+  .gallery figure.screenshot figcaption { font-size: 11.5px; margin-top: 6px; padding: 0 4px; line-height: 1.5; }
+
+  .bug {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 18px 22px; margin: 22px 0;
+  }
+  .bug h3 { margin-top: 0; }
+  .bug .row { display: grid; grid-template-columns: 110px 1fr; gap: 8px; margin: 6px 0; font-size: 14px; }
+  .bug .row strong { color: var(--fg-dim); font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; padding-top: 3px; }
+  .bug.warn { border-left-color: var(--amber); }
+  .bug.red  { border-left-color: var(--red); }
+
+  .session-divider {
+    margin: 80px 0 40px;
+    border: 0; border-top: 1px solid var(--border);
+    text-align: center; overflow: visible;
+  }
+  .session-divider::after {
+    content: "§"; display: inline-block;
+    background: var(--bg); color: var(--fg-muted);
+    padding: 0 16px; position: relative; top: -14px;
+    font-size: 18px;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 28px; margin-top: 60px;
+    color: var(--fg-muted); font-size: 12.5px;
+  }
+  footer a { color: var(--fg-dim); }
+
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: 1fr; }
+    nav.toc { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <h1>Build story</h1>
+    <p class="sub">platform-engineering-lab · field notes</p>
+    <a class="back" href="index.html">&larr; back to portfolio</a>
+    <ol>
+      <li><a href="#why">Why we built it</a></li>
+      <li><a href="#plan">The plan</a></li>
+      <li><a href="#architecture">What got built</a></li>
+      <li><a href="#bugs-1">Where it broke (sessions 1&ndash;3)</a></li>
+      <li><a href="#patterns">Patterns we kept seeing</a></li>
+      <li><a href="#status">Where we landed</a></li>
+      <li><a href="#session-5">Session 5 &mdash; the cold bring-up</a></li>
+      <li><a href="#strategy">The strategy that fell out of it</a></li>
+      <li><a href="#session-6">Session 6 &mdash; the destroy that wouldn&rsquo;t</a></li>
+      <li><a href="#evidence">Visual evidence</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <header class="hero">
+      <h1>Standing Up a Platform Engineering Lab on EKS</h1>
+      <p class="tagline">The plan, the bugs, and the fixes.</p>
+      <p class="byline">By the platform-engineering-lab maintainer &middot; 2026-05-15 &middot; updated 2026-05-16</p>
+      <div class="meta">
+        <span><strong>Cloud:</strong> AWS &middot; us-west-2</span>
+        <span><strong>EKS:</strong> v1.34</span>
+        <span><strong>GitOps:</strong> ArgoCD app-of-apps</span>
+        <span><strong>Read time:</strong> ~30 min</span>
+      </div>
+    </header>
+
+    <!-- 1. WHY -->
+    <section id="why">
+      <h2><span class="num">01</span>Why we built it</h2>
+
+      <p>What I keep coming back to with <code>platform-engineering-lab</code> is that I wanted it to reflect what a real internal Platform Engineering team actually owns day to day &mdash; not the polished conference-talk version of the job.</p>
+
+      <p>A lot of Kubernetes portfolio projects stop at &ldquo;the cluster deployed successfully.&rdquo; That was never the point here. The goal was to build the full operational stack the way a real platform team would have to support it in production: multi-environment AWS infrastructure provisioned through Terraform, remote state management, KMS encryption, OIDC federation, IRSA, NAT egress, private multi-AZ networking, and then the entire in-cluster platform layer on top of it.</p>
+
+      <p>That meant ingress, external DNS, TLS automation, secrets management, autoscaling, policy enforcement, observability, distributed tracing, centralized logging, backup/recovery, and cost visibility. GitOps is pull-based through Argo CD. CI/CD runs through reusable GitHub Actions workflows authenticated to AWS through OIDC instead of static credentials. Policies are enforced at multiple layers &mdash; in CI, at Kubernetes admission time, and at runtime.</p>
+
+      <p>The architecture document (<code>_project-docs/architecture/00-overview.md</code>) was intentionally opinionated about scope. I didn&rsquo;t want this to become a &ldquo;collect every CNCF logo&rdquo; exercise. The design goal was operational realism rather than feature sprawl.</p>
+
+      <p>The repository structure mirrors how a real platform organization would separate ownership domains. Multi-environment overlays for dev, staging, and production were designed in from the beginning instead of being retrofitted later. Credential management was another hard requirement: no long-lived AWS keys anywhere in the system. GitHub Actions authenticates to AWS through <code>AssumeRoleWithWebIdentity</code>, workloads inside the cluster use IRSA, and application secrets are pulled dynamically from AWS Secrets Manager through External Secrets Operator.</p>
+
+      <p>The intended audience for the project is senior platform, SRE, and DevOps engineers reviewing the work from an operational perspective. I wanted the project to demonstrate end-to-end ownership rather than just familiarity with tools or certifications.</p>
+
+      <p>That set a much higher bar for the implementation. The environment needed to actually deploy cleanly from <code>terraform apply</code>, function correctly after bootstrap, and tear down cleanly through <code>terraform destroy</code>. Costs needed to be reasonable and explainable. Operational issues needed to be debugged properly rather than hidden behind screenshots or mocked outputs.</p>
+
+      <p>A big part of the value of the project came from the failures and troubleshooting along the way. We hit Terraform dependency cycles and had to redesign module boundaries to break them cleanly. IAM policies repeatedly failed because of missing edge-case permissions that only surfaced during runtime testing. Helm hooks occasionally stalled and left releases in partially deployed states that required manual debugging. Some container registries changed authentication behavior midstream, which forced updates to pull policies and automation logic.</p>
+
+      <p>Those problems ended up being just as important as the successful deployments because they reflected the kind of operational work platform teams actually spend their time doing.</p>
+
+      <p>The detailed component-by-component reference material lives in <a href="eks-and-platform-deep-dive.md"><code>eks-and-platform-deep-dive.md</code></a>. This document is meant more as the engineering field notes behind the project &mdash; the design decisions, operational tradeoffs, mistakes, debugging sessions, and lessons learned while building and stabilizing the platform end to end.</p>
+    </section>
+
+    <!-- 2. PLAN -->
+    <section id="plan">
+      <h2><span class="num">02</span>The plan</h2>
+
+      <p>We layered the build before writing any Terraform. The layering rule, copied straight from <code>_project-docs/architecture/01-layered-build-order.md</code>:</p>
+
+      <pre class="diagram">Layer 5  Agentic / Self-Service     agents/, platform-services/
+Layer 4  Reliability / FinOps       reliability/, finops/
+Layer 3  Security / Observability   security/, observability/
+Layer 2  Workloads + GitOps         kubernetes/, gitops/, cicd/
+Layer 1  Infrastructure (cloud)     infrastructure/</pre>
+
+      <p>A failure at layer N never gets fixed by changing layer N+1. The dependency direction is strictly downward. Falco doesn&rsquo;t get to demand a network change. Backstage doesn&rsquo;t get to demand a Prometheus tuning. When a request would skip a layer, we surface the dependency first.</p>
+
+      <p>On top of the layers, four phases:</p>
+
+      <table>
+        <thead><tr><th>Phase</th><th>Name</th><th>What ships</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>MVP</td><td>VPC, EKS, ingress-nginx, cert-manager, ExternalDNS, ArgoCD, kube-prometheus-stack, Loki, Kyverno baseline</td></tr>
+          <tr><td>2</td><td>Reliability</td><td>OpenTelemetry, Tempo, Velero, OpenCost, chaos engineering, DR drills</td></tr>
+          <tr><td>3</td><td>Internal Platform</td><td>Backstage, self-service templates, golden paths</td></tr>
+          <tr><td>4</td><td>Agentic</td><td>LangGraph orchestration, intent parser, automated remediation, FinOps-aware planning</td></tr>
+        </tbody>
+      </table>
+
+      <p>Phase 1 intentionally skips multi-region, GPU pools, service mesh, Tempo, Falco, advanced OPA, ephemeral envs. The temptation to add Falco &ldquo;while we&rsquo;re in there&rdquo; with Kyverno is constant. I say no every time.</p>
+
+      <h3>Apply cadence</h3>
+
+      <p>The second decision was the <em>apply cadence</em>. We could&rsquo;ve implemented all 45 sprints on disk before any AWS apply &mdash; or we could apply each sprint as it landed. We chose the latter and wrote it into Directive 02:</p>
+
+      <blockquote>
+        <p>implement &rarr; local lint &rarr; apply to dev &rarr; validate &rarr; fix &rarr; destroy &rarr; next sprint.</p>
+      </blockquote>
+
+      <p>Never more than <strong>one</strong> sprint sits implemented-but-unapplied. Monolithic-first hides bugs across 600 files; layer-by-layer surfaces them in 25-file chunks. You can&rsquo;t validate Helm values without a live cluster &mdash; <code>helm template</code> will not tell you that ArgoCD&rsquo;s hook tracker is going to deadlock on a <code>hook-succeeded</code> Job. Only the cluster will tell you that.</p>
+
+      <p>Per-loop budget: 2&ndash;6 hours wall-clock, $5&ndash;25 AWS, $0&ndash;5 LLM. Escalation trigger: three failed apply attempts <em>or</em> more than eight hours debugging &mdash; pause and reassess, because the failure is probably structural, not a typo. The cluster is destroyed at the end of each loop. Phase 0 baseline (S3 state, KMS, ECR, CUR delivery) stays up at about $5/month. An idle EKS cluster runs $0.10/hour on the control plane plus two <code>m6i.large</code> nodes plus NAT plus EBS plus load balancers &mdash; roughly $3&ndash;4 per twelve-hour working day. We don&rsquo;t leave it running overnight.</p>
+
+      <p>The directive also separates Claude&rsquo;s role from mine. Claude writes code. I run <code>make tf-apply</code>. The apply step spends AWS money; it is human-driven on purpose.</p>
+    </section>
+
+    <!-- 3. ARCHITECTURE -->
+    <section id="architecture">
+      <h2><span class="num">03</span>What got built</h2>
+
+      <p>Phase 1&rsquo;s block diagram, with a few annotations from where we are now:</p>
+
+      <pre class="diagram">┌─────────────────────────────────────────────────────────────────────────────┐
+│  Operator workstation                                                        │
+│   │   make tf-apply / kube-context / argocd app sync                         │
+└─────┬───────────────────────────────────────────────────────────────────────┘
+      │                                    │
+      ▼                                    ▼
+┌─────────────┐                ┌──────────────────────┐
+│ GitHub repo │  PR / push     │  GitHub Actions      │
+│ (monorepo)  │ ─────────────► │  (reusable WFs, OIDC)│
+└─────────────┘                └──────────┬───────────┘
+                                          │ AssumeRoleWithWebIdentity
+                                          ▼
+┌─────────────────────── AWS Account <AWS_ACCOUNT_ID> / us-west-2 ──────────────┐
+│                                                                            │
+│  IAM/OIDC trust   KMS (eks · ebs · s3 · secrets)                           │
+│  S3   pel-tfstate-*  pel-loki-*  pel-flowlogs-*  pel-alb-logs-*            │
+│  ECR  pel/example-app  pel/ttl-teardown  ...                               │
+│  Route 53 (zone deferred)   Secrets Manager   CloudWatch Logs              │
+│                                                                            │
+│  ┌─────────────── VPC 10.0.0.0/16  ·  3 AZs ─────────────────────────┐    │
+│  │  IGW ─► public subnets ─► NLB (ingress-nginx) ──┐                  │    │
+│  │  private subnets ◄─ NAT GW ─────────────────────┴► nodes            │    │
+│  │       │                                                              │    │
+│  │  ┌──────────── EKS Cluster pel-eks-dev  (v1.34) ──────────────────┐ │    │
+│  │  │  ns: argocd            ns: platform-system   ns: observability   │ │    │
+│  │  │  ns: kyverno           ns: dev-apps / prod-apps                  │ │    │
+│  │  └──────────────────────────────────────────────────────────────────┘ │    │
+│  └──────────────────────────────────────────────────────────────────────┘    │
+└────────────────────────────────────────────────────────────────────────────┘</pre>
+
+      <div class="gallery">
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/vpc-console.png" alt="VPC console"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS Console &middot; VPC<span class="file">screenshots/phase-1/sprint-02-terraform/vpc-console.png</span></div>
+          <figcaption><strong>VPC</strong> &mdash; <code>pel-vpc-dev</code> spanning 3 AZs.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-03-eks/eks-console.png" alt="EKS console"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS Console &middot; EKS<span class="file">screenshots/phase-1/sprint-03-eks/eks-console.png</span></div>
+          <figcaption><strong>EKS cluster</strong> &mdash; <code>pel-eks-dev</code> on v1.34.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-03-eks/02-nodes-m6i-xlarge.png" alt="kubectl get nodes"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">kubectl get nodes<span class="file">screenshots/phase-1/sprint-03-eks/02-nodes-m6i-xlarge.png</span></div>
+          <figcaption><strong>Worker nodes</strong> &mdash; <code>kubectl get nodes</code>, private subnets only.</figcaption>
+        </figure>
+      </div>
+
+      <p>The shape is deliberately unsurprising. VPC <code>10.0.0.0/16</code> across three AZs (<code>us-west-2a/b/c</code>). Three subnet tiers per AZ: public (IGW-attached, hosts NLBs), private (NAT egress only, hosts EKS nodes), intra (no internet at all, kept for future RDS / ElastiCache). Nodes never get public IPs. All egress through NAT. The EKS control plane endpoint is public but CIDR-restricted to my workstation.</p>
+
+      <p>The IRSA web is where the design earns its keep. Every controller that needs an AWS API gets its own IAM role, assumed via the cluster&rsquo;s OIDC provider (<code>oidc.eks.us-west-2.amazonaws.com/id/&lt;id&gt;</code>). No node-role catch-all. Phase 1 roles:</p>
+
+      <table>
+        <thead><tr><th>IRSA role</th><th>What it needs</th></tr></thead>
+        <tbody>
+          <tr><td><code>pel-irsa-aws-lbc-dev</code></td><td>ELBv2, EC2 SG ops</td></tr>
+          <tr><td><code>pel-irsa-ebs-csi-dev</code></td><td>EBS volume lifecycle</td></tr>
+          <tr><td><code>pel-irsa-external-secrets-dev</code></td><td>Secrets Manager, SSM</td></tr>
+          <tr><td><code>pel-irsa-loki-dev</code></td><td>S3 (Loki chunks)</td></tr>
+          <tr><td><code>pel-irsa-cluster-autoscaler-dev</code></td><td>ASG describe/scale</td></tr>
+          <tr><td><code>pel-irsa-falcosidekick-dev</code></td><td>SNS / EventBridge</td></tr>
+          <tr><td><code>pel-irsa-arc-runners-dev</code></td><td>ECR push, S3 cache</td></tr>
+        </tbody>
+      </table>
+
+      <p>GitHub Actions has three roles assumed via OIDC: <code>pel-gha-tf-plan-role</code>, <code>pel-gha-tf-apply-role</code>, <code>pel-gha-ecr-push-role</code>. No <code>aws_access_key_id</code> exists anywhere in the lab. The entire trust web can be rotated by re-issuing the OIDC provider.</p>
+    </section>
+
+    <!-- 4. BUGS 1 -->
+    <section id="bugs-1">
+      <h2><span class="num">04</span>Where it broke &mdash; sessions 1 through 3</h2>
+
+      <p>The plan is the easy part. Here&rsquo;s what broke between intent and a working cluster, roughly in the order we hit it. Each one is recorded in <code>_project-docs/sessions/</code>. The pattern across them is more interesting than any individual fix: implicit ordering across components, registry and image churn we don&rsquo;t control, IAM policies that lag the controllers consuming them, and Helm hooks racing the GitOps system that&rsquo;s supposed to track them.</p>
+
+      <div class="bug">
+        <h3>4.1 &mdash; Phase 0 state was sitting on local disk</h3>
+        <div class="row"><strong>Symptom</strong><span>Phase 1&rsquo;s <code>data "terraform_remote_state" "phase0"</code> returned empty. The plan acted like the world was unprovisioned even though we&rsquo;d run <code>phase-0-baseline</code> an hour earlier.</span></div>
+        <div class="row"><strong>Cause</strong><span>No <code>backend "s3"</code> block in <code>phase-0-baseline/versions.tf</code>. The bootstrap <em>created</em> the S3 bucket <code>pel-tfstate-<AWS_ACCOUNT_ID></code> but never <em>used</em> it. State was happily sitting in a local <code>terraform.tfstate</code> next to the code, where Phase 1 had no way to read it.</span></div>
+        <div class="row"><strong>Fix</strong><span>Added <code>backend "s3"</code> blocks to both phases, then <code>terraform init -migrate-state</code>.</span></div>
+        <div class="row"><strong>Lesson</strong><span>Bootstrapping a state backend and <em>using</em> a state backend are two different operations. Naming a bucket <code>pel-tfstate-*</code> doesn&rsquo;t make Terraform write to it.</span></div>
+      </div>
+
+      <div class="bug">
+        <h3>4.2 &mdash; EKS 1.31 had quietly entered extended support</h3>
+        <div class="row"><strong>Symptom</strong><span><code>InvalidParameterException: kubernetes version "1.31" is only supported under extended support</code></span></div>
+        <div class="row"><strong>Cause</strong><span>EKS auto-rolled 1.31 into extended support around November 2025. Extended support adds another $0.10/hr to the control plane on top of the existing $0.10/hr &mdash; a quiet 2&times; control-plane bill if you don&rsquo;t notice. The runbook had 1.31 hard-coded from when we wrote the spec.</span></div>
+        <div class="row"><strong>Fix</strong><span>Bumped to 1.34 (standard support through December 2026). Bumped the addon pins along with it (vpc-cni, kube-proxy, coredns, pod-identity, ebs-csi) so we weren&rsquo;t running addons older than the control plane.</span></div>
+        <div class="row"><strong>Lesson</strong><span>Always check <code>aws eks describe-cluster-versions</code> before pinning. K8s minors cycle every ~3 months and extended support kicks in ~14 months after release. Pin a version, but check it on every fresh build.</span></div>
+      </div>
+
+      <div class="bug">
+        <h3>4.3 &mdash; The GitHub OIDC provider already existed in the account</h3>
+        <div class="row"><strong>Symptom</strong><span><code>EntityAlreadyExists: Provider with url https://token.actions.githubusercontent.com already exists</code></span></div>
+        <div class="row"><strong>Cause</strong><span>AWS allows <strong>one</strong> OIDC provider per URL per account. Another project in <code><AWS_ACCOUNT_ID></code> (an internal one called <code>visdoc</code>) had already created it. Our <code>iam-github-oidc</code> module declared the provider as a <code>resource</code> and tried to own it.</span></div>
+        <div class="row"><strong>Fix</strong><span>Refactored the module to use <code>data "aws_iam_openid_connect_provider"</code> instead of <code>resource</code>. Consume, don&rsquo;t own.</span></div>
+        <div class="row"><strong>Lesson</strong><span>In a shared account, the right default for anything globally unique &mdash; OIDC providers, S3 bucket names, certain IAM names &mdash; is &ldquo;look up, don&rsquo;t create&rdquo; unless you know nobody else needs it. I extended that discipline to a few other places after this bit us.</span></div>
+      </div>
+
+      <div class="bug">
+        <h3>4.4 &mdash; Security group rule descriptions had &ldquo;invalid&rdquo; characters</h3>
+        <div class="row"><strong>Symptom</strong><span>Apply failed validating SG rules. Twice. On two different patches.</span></div>
+        <div class="row"><strong>Cause</strong><span>AWS SG rule descriptions allow only <code>a-zA-Z0-9 . _ - : / ( ) # , @ [ ] + = &amp; ; { } ! $ *</code> and spaces. The original description used <code>&rarr;</code> (U+2192). First patch replaced it with <code>-&gt;</code> &mdash; turns out <code>&gt;</code> isn&rsquo;t in the allowed set either. Second patch used <code>to</code>. Finally valid.</span></div>
+        <div class="row"><strong>Lesson</strong><span>Stick to plain ASCII for anything AWS validates as free text. We burned two patches because the error message just said &ldquo;rule is invalid&rdquo; instead of pointing at the offending character.</span></div>
+      </div>
+
+      <div class="bug">
+        <h3>4.5 &mdash; EBS KMS key missing <code>kms:CreateGrant</code></h3>
+        <div class="row"><strong>Symptom</strong><span><code>Client.InvalidKMSKey.InvalidState</code> &rarr; <code>NodeCreationFailure: Instances failed to join the kubernetes cluster</code>. Managed node group went <code>CREATE_FAILED</code> after the ASG retried ten times. Nothing in the error message points at the KMS key policy.</span></div>
+        <div class="row"><strong>Cause</strong><span>EKS managed node groups launch via EC2 ASG. To attach a KMS-encrypted EBS root volume, the ASG&rsquo;s service-linked role needs <code>kms:CreateGrant</code> on the key. The <code>pel-ebs</code> key policy granted Decrypt and Encrypt but not CreateGrant.</span></div>
+        <div class="row"><strong>Fix</strong><span>Added a conditional grant to the key policy:</span></div>
+      </div>
+
+<pre><code>condition {
+  test     = "Bool"
+  variable = "kms:GrantIsForAWSResource"
+  values   = ["true"]
+}
+condition {
+  test     = "StringEquals"
+  variable = "aws:PrincipalAccount"
+  values   = [data.aws_caller_identity.current.account_id]
+}</code></pre>
+
+      <p>The <code>GrantIsForAWSResource</code> condition keeps the perm scoped to AWS services (we&rsquo;re not handing out <code>CreateGrant</code> broadly); the principal-account condition keeps it tight to the lab account.</p>
+
+      <p>Lesson: when a KMS-encrypted resource fails opaquely, suspect <code>CreateGrant</code>. The error message points at &ldquo;key state&rdquo; not &ldquo;key policy,&rdquo; which is misleading. I added a checklist item to the EKS module: any time a node group touches an encrypted volume, verify the key policy includes the grant conditions above.</p>
+
+      <h3 id="bootstrap-deadlock">4.6 &mdash; The Helm hook bootstrap deadlock</h3>
+
+      <p>This is the most instructive bug of the build, and I bring it up first when I walk anyone through the repo. It needed reasoning across multiple components, which is the whole point.</p>
+
+      <p>After the ArgoCD app-of-apps sync, five Applications stuck:</p>
+
+      <ul>
+        <li><code>cert-manager</code> &mdash; SyncFailed</li>
+        <li><code>kube-prometheus-stack</code> &mdash; SyncFailed</li>
+        <li><code>tempo</code> &mdash; SyncFailed</li>
+        <li><code>ingress-nginx</code> &mdash; Missing (hook stuck)</li>
+        <li><code>argocd</code> &mdash; Degraded (Ingress rejected)</li>
+      </ul>
+
+      <p>What was going on: a circular dependency cluster we&rsquo;d built ourselves by enabling sensible-looking options in each chart independently.</p>
+
+      <ol>
+        <li><strong>cert-manager</strong> failed because its Helm chart wanted to create a <code>monitoring.coreos.com/ServiceMonitor</code> &mdash; but that CRD is owned by kube-prometheus-stack, which hadn&rsquo;t installed yet.</li>
+        <li><strong>kube-prometheus-stack</strong> failed because its admission webhook needs <code>cert-manager.io/Certificate</code> and <code>Issuer</code> CRs &mdash; but cert-manager hadn&rsquo;t installed.</li>
+        <li><strong>tempo</strong> had the same ServiceMonitor problem as cert-manager.</li>
+        <li><strong>ingress-nginx</strong> was waiting on a pre-install hook (<code>admission-create</code> Job) that never completed visibly. The chart&rsquo;s <code>hook-delete-policy: hook-succeeded</code> policy raced ArgoCD&rsquo;s hook tracker &mdash; the Job ran, succeeded, got deleted by the chart&rsquo;s own policy, and ArgoCD was left waiting forever for a resource that no longer existed.</li>
+        <li><strong>argocd</strong>&rsquo;s Ingress was rejected by the LBC ValidatingWebhookConfiguration because <code>IngressClass "nginx"</code> didn&rsquo;t exist &mdash; ingress-nginx hadn&rsquo;t installed.</li>
+      </ol>
+
+<pre class="diagram">cert-manager           ───SM CRD needed──►   kube-prometheus-stack
+kube-prometheus-stack  ───cert CRDs needed──► cert-manager
+ingress-nginx          ───IngressClass needed──► argocd Ingress validation</pre>
+
+      <p>The fix (commit <code>0c36ca3</code>) was to disable ServiceMonitor in the three charts that don&rsquo;t need it at bootstrap:</p>
+
+<pre><code># kubernetes/helm/cert-manager/values-dev.yaml
+prometheus:
+  enabled: false
+  servicemonitor:
+    enabled: false
+
+# kubernetes/helm/ingress-nginx/values-dev.yaml
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+
+# observability/tempo/values-dev.yaml
+serviceMonitor:
+  enabled: false</code></pre>
+
+      <p>That breaks the loop. cert-manager installs (no SM dependency), cert-manager CRDs become available, kube-prometheus-stack installs, ServiceMonitor CRDs become available, we re-enable SM in those three charts in a follow-up sync.</p>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/05-argocd-all-apps-healthy.png"
+             alt="ArgoCD all apps healthy"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">ArgoCD &middot; all child apps Healthy after the deadlock fix
+          <span class="file">screenshots/phase-1/sprint-04-cluster-bootstrap/05-argocd-all-apps-healthy.png</span></div>
+        <figcaption><strong>After the fix</strong> &mdash; all child Applications reach <em>Synced / Healthy</em> once the ServiceMonitor toggles break the circular CRD dependency.</figcaption>
+      </figure>
+
+      <p>Lesson: when a Helm chart can produce CRs from <em>another</em> chart, you have implicit ordering. ArgoCD sync waves are the proper fix; toggling optional features off is the pragmatic fix. The four charts that <em>succeeded</em> despite enabled SM (external-dns, external-secrets, metrics-server, AWS LBC) all use <code>ServerSideApply</code> with a sync strategy that tolerates missing CRDs &mdash; the failures used a stricter atomic apply. There&rsquo;s no single answer; you have to know which charts in your stack can survive a missing CRD reference and which can&rsquo;t.</p>
+
+      <h3>4.7 &mdash; The ingress-nginx admission webhook ghost-stuck</h3>
+
+      <p>This one is a follow-on to the bootstrap deadlock, but the mechanism is different. ingress-nginx Application stayed in Progressing forever. The pod was Running and healthy. The chart&rsquo;s <code>admission-create</code> pre-install Job had run, succeeded, and been cleaned up. But ArgoCD&rsquo;s Application status was waiting for a hook that no longer existed.</p>
+
+      <p>The ingress-nginx chart installs its admission webhook bootstrap as a Helm <code>pre-install</code> hook with <code>helm.sh/hook-delete-policy: hook-succeeded</code>. The Job generates a TLS cert for the admission webhook, registers the secret, then deletes itself. That works when Helm is driving. With ArgoCD in front, ArgoCD&rsquo;s hook tracker watches the Job lifecycle &mdash; and the chart&rsquo;s own delete policy gets there first. ArgoCD sees the Job vanish from under it and never gets a chance to mark the hook Healthy. Application sits Progressing.</p>
+
+      <p>Fix (commit <code>56f3a93</code>): disable the admission webhook bootstrap entirely. The controller still validates configs at NGINX reload time &mdash; that&rsquo;s the actual safety net. The admission webhook is a nice-to-have early-warning layer.</p>
+
+<pre><code># kubernetes/helm/ingress-nginx/values-dev.yaml
+controller:
+  replicaCount: 1
+  admissionWebhooks:
+    enabled: false  # bootstrap-hook job ghost-stuck in ArgoCD;
+                    # pod validates configs at reload</code></pre>
+
+      <p>Lesson: chart hook semantics designed for <code>helm install</code> don&rsquo;t always survive the GitOps wrapper. When a hook stalls and the pod is healthy, look at the chart&rsquo;s delete-policy first.</p>
+
+      <h3>4.8 &mdash; The Bitnami Docker Hub policy change</h3>
+
+      <p>Textbook supply-chain story. The Velero Helm chart&rsquo;s pre-install Job uses a <code>kubectl</code>-based pod that does CRD bookkeeping. The chart&rsquo;s default <code>kubectl</code> image was floating, which we&rsquo;d already fixed once in session 2 (commit <code>1903081</code>) by pinning to <code>bitnami/kubectl:1.32</code>.</p>
+
+      <p>Then today, the pin broke. <code>ErrImagePull: manifest unknown</code>. Bitnami changed Docker Hub publication policy in 2025; the <code>1.32</code> tag was effectively yanked from the public registry. A lot of public charts had the same morning.</p>
+
+      <p>First attempt: switch to <code>docker.io/rancher/kubectl:v1.32.0</code>. Rancher publishes an actively maintained kubectl image. Image pulled. Init container immediately failed with:</p>
+
+<pre><code>exec: /bin/sh: no such file or directory</code></pre>
+
+      <p>Rancher&rsquo;s kubectl image is scratch. It contains the <code>kubectl</code> binary and nothing else. The Velero chart&rsquo;s CRD-upgrade Job invokes <code>command: ["/bin/sh", "-c", ...]</code>. No shell, no init.</p>
+
+      <p>Second attempt: switch to <code>alpine/k8s:1.32.4</code>. Full Alpine base with <code>/bin/sh</code> and a kubectl binary. Image started. Then it tried to <code>cp</code> the binary into the <code>velero/velero</code> runtime image and exec it there:</p>
+
+<pre><code>exec: kubectl: not a dynamic executable</code></pre>
+
+      <p>The Velero chart&rsquo;s <code>upgrade-crds</code> Job uses a clever-but-fragile pattern: copy <code>sh</code> and <code>kubectl</code> from a kubectl image into the Velero distroless image at runtime, then exec them there. That only ever worked with bitnami&rsquo;s image because its binaries were Debian-based and glibc-compatible. Alpine&rsquo;s musl-linked binaries don&rsquo;t run in distroless. Rancher&rsquo;s scratch had no <code>sh</code> to copy. There is no kubectl image in 2026 that simultaneously (a) has <code>/bin/sh</code>, (b) ships musl-or-glibc-compatible-with-distroless binaries, and (c) is still being published.</p>
+
+      <p>Final fix (commit <code>db6b385</code>): disable the upgrade Job entirely.</p>
+
+<pre><code># reliability/velero/values-dev.yaml
+upgradeCRDs: false  # chart's main install lays down CRDs; the upgrade Job
+                    # copies sh/kubectl between two distinct base images, which
+                    # breaks on every modern non-bitnami kubectl image.
+
+kubectl:
+  image:
+    repository: docker.io/alpine/k8s
+    tag: "1.32.4"</code></pre>
+
+      <p>The chart&rsquo;s main install path lays down the CRDs. The upgrade Job is an optional follow-up step for in-place chart upgrades &mdash; useful in production where you don&rsquo;t reinstall the chart, irrelevant in a dev lab where every fresh apply lays everything down anew.</p>
+
+      <p>Three lessons rolled into one bug:</p>
+      <ol>
+        <li>Image registries change policy. A tag you pinned in 2025 may not exist in 2026.</li>
+        <li>Replacing one image with another is not equivalent. Their base layers matter. Scratch &ne; Alpine &ne; Debian.</li>
+        <li>A chart that copies binaries between images at runtime is making assumptions about both images. When the source image changes, the copy can fail in ways the chart author never anticipated.</li>
+      </ol>
+
+      <h3>4.9 &mdash; ArgoCD self-management chart drift</h3>
+
+      <p>ArgoCD self-management is one of the prettier patterns in GitOps: the cluster reconciles ArgoCD onto itself, so ArgoCD upgrades become a Git PR like everything else. It worked for several sessions. Then today it stopped.</p>
+
+      <p><code>argocd-repo-server</code> pods went <code>CrashLoopBackOff</code>. Init container <code>copyutil</code> exited non-zero immediately. ArgoCD kept respawning the broken ReplicaSet because automated self-sync was re-applying the bad spec from Git.</p>
+
+      <p>The <code>argo-cd</code> Helm chart 7.* re-renders the repo-server init container with both <code>command</code> and <code>args</code> set on the spec. The init container runs <code>/bin/cp</code> to lay down shared binaries; when the spec has both <code>command</code> and <code>args</code>, the resulting exec is <code>cp arg1 arg2 arg3 arg4 arg5</code> &mdash; five positional arguments instead of the expected four. cp errors out, init fails, pod loops.</p>
+
+      <p>The Helm template output drifts between chart minor versions. Our pinned <code>targetRevision</code> was floating within <code>7.*</code>. A point release re-rendered the spec and broke the init container.</p>
+
+      <p>Fix (commit <code>51abc8</code>): disable automated sync on the <code>argocd</code> Application until I investigate the chart drift properly.</p>
+
+<pre><code># gitops/applications/argocd.yaml
+syncPolicy:
+  # Self-management disabled in phase-1 stabilization — argo-cd Helm chart 7.*
+  # produces a broken repo-server init container (command + args mixed) on
+  # re-render. ArgoCD installed via make argocd-bootstrap remains the source
+  # of truth until the chart drift is investigated in a follow-up sprint.
+  syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true</code></pre>
+
+      <p>The cluster keeps running on the working ArgoCD pod from <code>make argocd-bootstrap</code>. We&rsquo;ve broken the elegance &mdash; ArgoCD is no longer self-managed &mdash; but we&rsquo;ve stopped the bleeding. Restoring self-management is a Phase 2 task: pin <code>targetRevision</code> to an exact patch version (not <code>7.*</code>), validate <code>helm template</code> output before each bump, re-enable automated self-sync once a bump is known clean.</p>
+
+      <p>Lesson: <code>targetRevision: "*"</code> (or any wildcard) on the chart that manages your GitOps controller itself is unsafe. The blast radius of a bad render is the entire reconciliation loop. We&rsquo;re tightening the pinning convention across the repo &mdash; every Application either pins an exact chart version or pins a patch-level constraint like <code>7.6.x</code>.</p>
+
+      <h3>4.10 &mdash; AWS LBC v2.7 added <code>DescribeListenerAttributes</code></h3>
+
+      <p>The AWS Load Balancer Controller is the in-cluster controller that reconciles <code>Service type=LoadBalancer</code> and Ingress objects into real ALBs/NLBs. Its IRSA policy (<code>pel-irsa-aws-lbc-dev</code>) had been written in session 2. We thought it was complete. It wasn&rsquo;t.</p>
+
+      <p>ingress-nginx&rsquo;s <code>EXTERNAL-IP</code> stuck at <code>&lt;pending&gt;</code> indefinitely. <code>kubectl describe svc</code> showed repeated <code>FailedDeployModel</code> events. No NLB ever appeared in <code>aws elbv2 describe-load-balancers</code>.</p>
+
+      <p>After enough digging, the LBC reconciler logs showed <code>AccessDenied</code> on <code>elasticloadbalancing:DescribeListenerAttributes</code> and <code>elasticloadbalancing:ModifyListenerAttributes</code>. Neither was in our IRSA policy. Both were added to the controller&rsquo;s required-permissions list in v2.7 (mid-2025). Our policy had been written against the v2.4 docs and never refreshed when we bumped the controller.</p>
+
+      <p>Fix (commit <code>bfecd99</code>):</p>
+
+<pre><code># infrastructure/phase-1-mvp/modules/iam-irsa/main.tf
+"elasticloadbalancing:DescribeLoadBalancers",
+"elasticloadbalancing:DescribeLoadBalancerAttributes",
+"elasticloadbalancing:DescribeListeners",
+"elasticloadbalancing:DescribeListenerCertificates",
+"elasticloadbalancing:DescribeListenerAttributes",   # new in v2.7
+"elasticloadbalancing:DescribeSSLPolicies",
+"elasticloadbalancing:DescribeRules",
+"elasticloadbalancing:DescribeTargetGroups",
+"elasticloadbalancing:DescribeTargetGroupAttributes",
+"elasticloadbalancing:DescribeTargetHealth",
+"elasticloadbalancing:DescribeTags",
+"elasticloadbalancing:DescribeTrustStores",          # new in v2.7
+"elasticloadbalancing:ModifyListener",
+"elasticloadbalancing:ModifyListenerAttributes",     # new in v2.7
+"elasticloadbalancing:AddTags",</code></pre>
+
+      <p>Three new perms &mdash; two Describe, one Modify. With those added, the NLB provisioned in under three minutes.</p>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-05-gitops/01-argocd-ingress.png"
+             alt="argocd ingress"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">ArgoCD &middot; ingress live behind NLB
+          <span class="file">screenshots/phase-1/sprint-05-gitops/01-argocd-ingress.png</span></div>
+        <figcaption><strong>ArgoCD ingress</strong> &mdash; behind the NLB that LBC finally provisioned once the v2.7 perms landed.</figcaption>
+      </figure>
+
+      <p>Lesson: IAM policies for in-cluster controllers go stale with chart bumps. Every controller upgrade should diff the upstream&rsquo;s recommended IAM JSON against your committed policy. I&rsquo;m adding this to the chart-bump checklist. There&rsquo;s a real argument for sourcing the policy JSON directly from the upstream chart&rsquo;s docs in CI &mdash; that&rsquo;s Phase 2 hardening work.</p>
+
+      <h3>4.11 &mdash; Falco <code>rules_file</code> vs <code>rules_files</code></h3>
+
+      <p>A one-character bug. Falco crash-looped 144 times before I caught it.</p>
+
+      <p>Container logs:</p>
+
+<pre><code>fatal: both rules_files and rules_file keys set in /etc/falco/falco.yaml</code></pre>
+
+      <p>The Falco chart 0.36+ ships a default config with <code>rules_files:</code> (plural). Our <code>values-dev.yaml</code> was overriding with <code>rules_file:</code> (singular, deprecated). Both keys ended up in the merged config. Falco refuses to start when both are present.</p>
+
+      <p>Fix (commit <code>bfecd99</code>): switch the values key from singular to plural.</p>
+
+      <p>Lesson: when a tool deprecates a config key in favor of a renamed version, the <em>merger</em> behavior matters. Some tools quietly accept both. Others treat both-present as fatal. Always check release notes when bumping a chart with historical singular/plural keys.</p>
+
+      <h3>4.12 &mdash; The gp3 StorageClass that wasn&rsquo;t there</h3>
+
+      <p>Prometheus and Grafana PVCs Pending forever on a fresh cluster. <code>kubectl describe pvc</code>: <code>no storage class found</code>.</p>
+
+      <p>The EBS CSI driver installs but does <strong>not</strong> create a default StorageClass. Older EKS releases shipped a <code>gp2</code> SC as part of the legacy in-tree volume provisioner; newer ones (1.25+ with CSI-only) don&rsquo;t. Our Phase 1 charts all request <code>gp3</code>. The SC has to be created out-of-band.</p>
+
+<pre><code>apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+parameters:
+  type: gp3
+  encrypted: "true"</code></pre>
+
+      <p><code>volumeBindingMode: WaitForFirstConsumer</code> is the important bit &mdash; it defers AZ selection until the consuming pod is scheduled, so the EBS volume lands in the same AZ as the pod that mounts it.</p>
+
+      <p>I considered putting the SC into Terraform (a Kubernetes provider apply after EKS comes up) or into ArgoCD as wave &minus;1. For now it&rsquo;s documented in the rebuild runbook because the apply step is human-driven anyway. A future hardening sprint moves it into IaC.</p>
+
+      <p>Lesson: &ldquo;it worked in the cluster I tested&rdquo; is not portable. Anything that depends on a default-named StorageClass must either document the manual step, include the SC in its own values file, or apply the SC as part of bootstrap.</p>
+
+      <div class="gallery">
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-06-observability/01-prometheus-targets.png" alt="Prometheus targets"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Prometheus &middot; targets healthy<span class="file">screenshots/phase-1/sprint-06-observability/01-prometheus-targets.png</span></div>
+          <figcaption><strong>Prometheus targets</strong> &mdash; scraping the cluster once the gp3 PVC binds.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-06-observability/Grafana-Overview-Dashboards-Grafana.png" alt="Grafana overview"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Grafana &middot; overview<span class="file">screenshots/phase-1/sprint-06-observability/Grafana-Overview-Dashboards-Grafana.png</span></div>
+          <figcaption><strong>Grafana</strong> &mdash; overview dashboard, hosted on the same gp3 volume that almost wasn&rsquo;t there.</figcaption>
+        </figure>
+      </div>
+
+      <h3>4.13 &mdash; ArgoCD CLI vs port-forward fragility</h3>
+
+      <p>Not a bug in any one component &mdash; a process bug. I kept reaching for <code>argocd app sync</code> to trigger reconciliations.</p>
+
+      <p><code>argocd app sync</code> repeatedly failed with <code>Argo CD server address unspecified</code> or hung on gRPC handshake. Login state was per-shell. Port-forward had to use <code>--address 0.0.0.0</code> to be reachable from a separate terminal. I was burning a non-trivial fraction of debug time on CLI plumbing instead of the actual problem.</p>
+
+      <p>The workaround was to skip the CLI entirely. The Application CR is just a Kubernetes resource; kubectl can trigger a sync by patching its operation field:</p>
+
+<pre><code>kubectl -n argocd patch application &lt;name&gt; --type merge \
+  -p '{"operation":{"sync":{"prune":true,"syncStrategy":{"apply":{"force":true}}}}}'</code></pre>
+
+      <p>That&rsquo;s it. No port-forward, no login, no per-shell state. Works as well from CI as from a laptop.</p>
+
+      <p>Lesson: when a CLI is fighting you, remember it&rsquo;s a thin wrapper over an API. The API is usually saner. Our session notes now default to <code>kubectl patch application</code> rather than <code>argocd app sync</code>.</p>
+    </section>
+
+    <!-- 5. PATTERNS -->
+    <section id="patterns">
+      <h2><span class="num">05</span>Patterns we kept seeing</h2>
+
+      <p>A few common shapes repeated across these incidents. They&rsquo;re worth naming on their own, because they apply well beyond this specific lab.</p>
+
+      <h3>Shared AWS accounts mean <code>data</code>, not <code>resource</code>, for anything globally unique</h3>
+      <p>OIDC providers, certain S3 bucket name patterns, certain IAM roles. The right default in a multi-tenant account is &ldquo;look up, don&rsquo;t create&rdquo; unless you explicitly own the resource. The GitHub OIDC provider conflict cost us a Terraform refactor I should have written in the first place.</p>
+
+      <h3>Cross-chart CRD references are implicit ordering; ArgoCD sync waves are the explicit fix</h3>
+      <p>Optional-feature toggles are the pragmatic fix when sync waves aren&rsquo;t enough. I&rsquo;ve now classified each Phase 1 chart by what it produces (CRDs, webhooks, ingress classes) and what it consumes from other charts, and the sync-wave numbers fall out mechanically.</p>
+
+      <h3><code>targetRevision: "*"</code> is poison on a chart that manages your control plane</h3>
+      <p>ArgoCD self-management was the prettiest pattern in the repo until a chart minor break took us down. Pin patch versions on anything in the GitOps critical path. Floating tags are fine for leaf-node application charts &mdash; not for platform.</p>
+
+      <h3>Image registries change policy; build a substitution plan, not a single pin</h3>
+      <p>The Bitnami cascade was three commits and four registry attempts. The lesson isn&rsquo;t &ldquo;Bitnami did us wrong&rdquo; &mdash; it&rsquo;s that any chart that ships a default image reference to a third-party registry is one policy change away from breaking. In lab-grade we tolerate this; in production we&rsquo;d mirror critical images into our own ECR and pin against that.</p>
+
+      <h3>Admission webhooks layer in unexpected ways during bootstrap</h3>
+      <p>The argocd Ingress was rejected because the LBC webhook validated that <code>IngressClass nginx</code> existed before ingress-nginx had installed. The Prometheus admission webhook needs cert-manager. The ingress-nginx admission webhook needs to mint its own cert. Each webhook is fine in isolation; the combination has to be sequenced. I now treat any chart that ships a ValidatingWebhookConfiguration as a sync-wave participant by default.</p>
+
+      <h3>IAM policies for controllers go stale</h3>
+      <p>Chart bumps add API calls. The LBC v2.7 lesson is going to repeat for any controller without a policy-diff process. I&rsquo;m sketching a CI step that compares the committed IRSA policy against the upstream controller&rsquo;s recommended policy JSON on every chart-bump PR.</p>
+
+      <h3>The hook-tracker race is a class of bug, not a one-off</h3>
+      <p>Helm hooks with <code>hook-delete-policy: hook-succeeded</code> race ArgoCD&rsquo;s hook tracker. We hit it on ingress-nginx; we&rsquo;ll hit it again on any chart that uses the same pattern. The portable answer is to either disable the chart-side delete policy or to wrap the hook in an ArgoCD-aware Job manifest of our own.</p>
+    </section>
+
+    <!-- 6. STATUS -->
+    <section id="status">
+      <h2><span class="num">06</span>Where we landed</h2>
+
+      <p>Status as of session 3:</p>
+
+      <ul>
+        <li><strong>Phase 0 baseline</strong> &mdash; applied and stable. Sits at ~$5/month idle.</li>
+        <li><strong>Phase 1 MVP</strong> &mdash; applied. EKS v1.34, 2&times; <code>m6i.large</code> nodes, full IRSA web, ArgoCD bootstrapped, app-of-apps wired.</li>
+        <li><strong>Sync state</strong> &mdash; ArgoCD core, cert-manager, kube-prometheus-stack, tempo, opencost, external-dns, external-secrets, LBC, chaos-mesh, goldilocks, ARC, arc-runner-set all Healthy. ingress-nginx and velero unblocked by today&rsquo;s session. argocd self-management intentionally disabled until the chart-drift investigation completes.</li>
+        <li><strong>Phase 2 reliability</strong> &mdash; partial. Tempo, OpenCost, Velero, Chaos Mesh, Falco are wired and reconciling. DR drills and chaos experiments are Phase 2 follow-on sprints.</li>
+        <li><strong>Phase 3 and 4</strong> &mdash; ahead per the layered plan. No work started, on purpose.</li>
+      </ul>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/08-all-apps-live.png"
+             alt="all apps live"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">ArgoCD &middot; all platform apps live
+          <span class="file">screenshots/phase-1/sprint-04-cluster-bootstrap/08-all-apps-live.png</span></div>
+        <figcaption><strong>End-of-session state</strong> &mdash; every platform Application synced and running.</figcaption>
+      </figure>
+
+      <p>The next loop is portfolio screenshot capture &mdash; the rebuild runbook is now known-good and reproducible at about 35 minutes and 50 cents per cycle. After that I revisit ArgoCD self-management with the pinning convention above, then start carving into Phase 2&rsquo;s reliability work properly: chaos experiments wired into Pyrra SLO budgets, Velero restore drills, OpenCost-driven rightsizing PRs.</p>
+
+      <p>The lab is doing what it was built to do. It runs. It tears down clean. The bugs we hit are the ones a real platform team hits. The narrative above is the value. The cluster running underneath is just the venue.</p>
+    </section>
+
+    <hr class="session-divider">
+
+    <!-- 7. SESSION 5 -->
+    <section id="session-5">
+      <h2><span class="num">07</span>Session 5 &mdash; the cold bring-up that broke 12 things</h2>
+
+      <p>A week after Session 3 declared Phase 1 &ldquo;applied and stable,&rdquo; the cluster came down, sat dormant for a few days, and got brought back up from <code>terraform apply</code> on <code>main</code>. Session 4 ran a short closeout. Then Session 5 hit a fresh <code>terraform apply</code> and discovered that &ldquo;stable&rdquo; had been doing a lot of heavy lifting &mdash; at least twelve distinct bugs were lurking that only surfaced on a <em>cold</em> bring-up. None of them had appeared on the warm cluster Session 3 signed off on.</p>
+
+      <p>The pattern across all of them: the apply succeeded, ArgoCD reported most apps as <em>Synced / Healthy</em>, and the underlying resources were either missing, half-deployed, or quietly wrong. The cluster looked green in the UI and the cluster was not green. Every bug below was caught by ignoring the ArgoCD app-health column and reading the actual workload state instead.</p>
+
+      <h3>7.1 &mdash; The gp3 StorageClass nobody created (again)</h3>
+
+      <p><code>kube-prometheus-stack</code> came up <em>Synced / Degraded</em>. The Grafana pod was <code>Pending</code> for two hours.</p>
+
+<pre><code>Warning  FailedScheduling  pod has unbound immediate PersistentVolumeClaims
+ProvisioningFailed         storageclass.storage.k8s.io "gp3" not found</code></pre>
+
+      <p>Five different charts (prometheus, alertmanager, grafana, loki, tempo) reference <code>storageClassName: gp3</code> in their values, and the only StorageClass that exists on a fresh EKS cluster is <code>gp2</code>. The EBS CSI driver addon does not ship a <code>gp3</code> SC. Nobody had added one. Last session&rsquo;s cluster had <code>gp3</code> because someone had <code>kubectl apply</code>&rsquo;d it manually at some point and the SC survived destroy/rebuild only because&hellip; well, it didn&rsquo;t. It was just absent from the start this time, and the warm cluster from Session 3 had been carrying it from a forgotten manual <code>kubectl create</code>.</p>
+
+      <p>Fix: a 12-line <code>StorageClass</code> manifest under <code>kubernetes/base/storage-classes/</code> and a one-off ArgoCD <code>Application</code> at sync-wave <code>-10</code> so it lands before any chart that wants a PVC. With the SC present, the Prometheus operator&rsquo;s reconcile loop creates the StatefulSet within a minute. Grafana&rsquo;s PVC binds.</p>
+
+      <h3>7.2 &mdash; The Prometheus operator says exactly what&rsquo;s wrong</h3>
+
+      <p>Once Grafana recovered, Prometheus and Alertmanager <em>still</em> did not start. The Prometheus CR had been sitting at <code>RECONCILED=False</code> for two hours. The reconcile error was right there in <code>status.conditions</code>:</p>
+
+<pre><code>message: storage class "gp3" does not exist
+reason:  ReconciliationFailed</code></pre>
+
+      <p>Same root cause, second-order effect. The lesson is that <code>kubectl get prometheus,alertmanager -o yaml</code> and reading the status conditions is faster than reading prometheus-operator pod logs &mdash; the operator surfaces the exact reconciliation failure in the CR status. We had been grepping operator logs and ignoring the CR.</p>
+
+      <h3>7.3 &mdash; Alertmanager config schema drift</h3>
+
+      <p>With the SC in place, Alertmanager <em>still</em> did not start. Different error:</p>
+
+<pre><code>provision alertmanager configuration: failed to initialize from secret:
+yaml: unmarshal errors:
+  line 29: field api_url_secret not found in type config.plain
+  line 39: field routing_key_secret not found in type config.plain</code></pre>
+
+      <p><code>api_url_secret</code> and <code>routing_key_secret</code> are valid fields &mdash; in the prometheus-operator <code>AlertmanagerConfig</code> CRD. They are <em>not</em> valid in raw Alertmanager v0.27 config, which only knows about <code>api_url</code> / <code>api_url_file</code> and <code>routing_key</code> / <code>routing_key_file</code>. Someone (probably the original author of the values file) had cross-pollinated the two schemas. The cluster had been accepting it because the Secret holding the config got generated but Alertmanager never tried to parse it on the prior run.</p>
+
+      <p>The portfolio-grade fix is <code>alertmanagerSpec.secrets[]</code> mounting an ExternalSecret-backed Secret with <code>*_file</code> references. The lab fix is inline placeholder URLs with a comment documenting how production would wire it. The routing topology is what&rsquo;s interesting in the demo; the actual webhook delivery does not need to fire.</p>
+
+      <h3>7.4 &mdash; The Loki chart that won&rsquo;t render</h3>
+
+      <p>ArgoCD reported <code>loki</code> as <code>Unknown / Healthy</code>. Translation: it had never successfully rendered the Helm chart, so it had no opinion on whether it was in sync. Pull the actual <code>comparisonError</code>:</p>
+
+<pre><code>helm template loki grafana/loki -f values-dev.yaml ...
+Error: execution error at (loki/templates/single-binary/statefulset.yaml:44:28):
+  Please define loki.storage.bucketNames.chunks</code></pre>
+
+      <p>Two structural problems in one values file:</p>
+
+      <ul>
+        <li><code>loki.storage.s3.bucketNames</code> should be <code>loki.storage.bucketNames</code>. The S3-specific <code>region</code> belongs under <code>s3.</code>, but <code>bucketNames</code> lives at the parent level. The chart added that constraint somewhere between the version this repo was originally pinned to and the v6 series that&rsquo;s current.</li>
+        <li>The chart now ships <code>read.replicas</code>, <code>write.replicas</code>, <code>backend.replicas</code> non-zero by default. Combined with <code>deploymentMode: SingleBinary</code> and a <code>singleBinary.replicas: 1</code> block, the chart&rsquo;s own validator refuses to render &mdash; both modes are active simultaneously.</li>
+      </ul>
+
+      <p>Fix: move <code>bucketNames</code> up one level, explicitly zero the SSD-target replicas, disable <code>gateway</code> + <code>chunksCache</code> + <code>resultsCache</code> (overkill for a dev SingleBinary). Then it renders 12 resources and the Loki pod starts.</p>
+
+      <h3>7.5 &mdash; otel-collector chart 0.97 quietly removed the default image</h3>
+
+      <p>Same <code>Unknown / Healthy</code> ghost as Loki. Different error:</p>
+
+<pre><code>Error: 'image.repository' must be set.
+See https://github.com/open-telemetry/opentelemetry-helm-charts/blob/main/charts/opentelemetry-collector/UPGRADING.md</code></pre>
+
+      <p>The OpenTelemetry Collector Helm chart 0.97+ deliberately removed the default image &mdash; you have to commit to either <code>otel/opentelemetry-collector</code> (core) or <code>otel/opentelemetry-collector-contrib</code> (more processors, what we want for tail-sampling and <code>k8sattributes</code>). The values file in this repo predates 0.97 and never set it.</p>
+
+      <p>One-line fix. The class of bug is <em>chart upgrade silently removes a default</em>. We have no tooling that catches this; the chart <code>targetRevision</code> is <code>0.*</code> which floats. Follow-up: either pin minor versions in the AppSet template or add a CI step that does <code>helm template</code> against every chart in the repo and fails on stderr.</p>
+
+      <h3>7.6 &mdash; ArgoCD lies about app health when it can&rsquo;t render</h3>
+
+      <p>This is the meta-lesson from 7.4 and 7.5. <code>kubectl get applications</code> reported <code>loki Unknown / Healthy</code> and <code>otel-collector Unknown / Healthy</code> &mdash; two apps that don&rsquo;t exist in the cluster, no namespace, no pods. Healthy by what definition?</p>
+
+      <p>ArgoCD&rsquo;s health computation is <em>lazy</em>. If the app has never successfully diff&rsquo;d desired against live state, it has nothing to be unhealthy <em>about</em>. The <code>Unknown</code> sync status is the truthful signal; the <code>Healthy</code> next to it is misleading framing. A health column reading <code>Unknown / Healthy</code> for an hour means &ldquo;we never got far enough to find out it&rsquo;s broken.&rdquo; Treat <code>Unknown</code> as a hard failure in any operations dashboard; the green-looking pair is a phantom.</p>
+
+      <p>I had been scanning the app list for red rows. I should have been scanning for grey rows.</p>
+
+      <h3>7.7 &mdash; example-app is not in GitOps</h3>
+
+      <p>An embarrassing find. The example application &mdash; the whole point of having a demo workload &mdash; was <code>kubectl apply</code>&rsquo;d manually in Session 4 and never wired into the GitOps tree. The Application file existed at <code>gitops/applications/tenants/example-app/dev.yaml</code> but nothing referenced it. The root AppSet only walks <code>gitops/appsets/</code>, and that directory had no tenant entry.</p>
+
+      <p>So on every fresh bring-up since Session 4, the cluster came up with zero workloads despite a <code>pel/example-app</code> image sitting in ECR and a chart sitting in <code>examples/microservice-demo/chart/</code>.</p>
+
+      <p>Fix: add <code>gitops/applications/tenants/kustomization.yaml</code> listing tenant Applications, and <code>gitops/appsets/tenants-dev-app.yaml</code> as a thin Application that synchronously applies that kustomization at sync wave 19. Now tenants come up on every fresh bring-up without manual intervention. The pattern scales to additional tenants by adding files to <code>gitops/applications/tenants/&lt;tenant&gt;/</code>.</p>
+
+      <h3>7.8 &mdash; The phantom <code>{{name}}</code> Application</h3>
+
+      <p>ArgoCD&rsquo;s sync log showed the security AppSet generating a real-looking template error:</p>
+
+<pre><code>Application.argoproj.io "{{name}}" is invalid: metadata.name: Invalid value: "{{name}}"</code></pre>
+
+      <p>The <code>{{name}}</code> was literal, not substituted. The security ApplicationSet uses a git file generator that walks <code>gitops/applications/security/*.yaml</code>, treating each file as a parameter map (<code>{name, repoURL, chart, valuesFile, syncWave}</code>) and substituting those values into the AppSet template. One file in that directory &mdash; <code>kyverno-policies-app.yaml</code> &mdash; was a full <code>Application</code> manifest, not a parameter map. The generator parsed it, found no top-level <code>name</code> field, and rendered <code>{{name}}</code> literally. The resulting Application had a name of <code>{{name}}</code>, which Kubernetes correctly rejected.</p>
+
+      <p>The error didn&rsquo;t stop the AppSet from generating the <em>other</em> applications correctly, so the security stack came up healthy. It just emitted a phantom failed Application into root-dev&rsquo;s sync status, contributing to the <code>Degraded</code> cascade.</p>
+
+      <p>Fix: move the standalone Application to <code>gitops/appsets/</code> where standalone Applications live. The mistake is structural: any directory walked by a parameterized AppSet generator should contain only parameter files. Mixing two file formats invites exactly this confusion.</p>
+
+      <h3>7.9 &mdash; Pyrra Helm repo is dead</h3>
+
+      <p><code>gitops/applications/observability/pyrra.yaml</code> pointed at <code>https://pyrra-dev.github.io/pyrra</code> for the Helm chart. That URL returns 404. The project on GitHub is alive &mdash; v0.10.0 released two weeks ago &mdash; but the published chart repo is gone.</p>
+
+      <p>Sprint 11&rsquo;s spec was originally written as &ldquo;Pyrra/Sloth&rdquo; with Sloth as the documented alternative. So we switched. Sloth&rsquo;s chart repo (<code>slok-dev.github.io/sloth-helm-charts</code>) is <em>also</em> 404, but Sloth ships raw Kubernetes manifests at a stable path in the project repo (<code>deploy/kubernetes/raw/sloth.yaml</code>). I vendored v0.16.0&rsquo;s manifests plus the <code>PrometheusServiceLevel</code> CRD into <code>observability/sloth/operator/</code>, patched the hard-coded <code>monitoring</code> namespace to <code>observability</code>, and rewrote the two SLO definitions for Sloth&rsquo;s CR shape (one <code>PrometheusServiceLevel</code> with multiple SLOs in <code>spec.slos[]</code> instead of one CR per SLO).</p>
+
+      <p>A latent bug fell out of the migration: the original Pyrra SLOs referenced <code>http_requests_total</code> and <code>http_request_duration_seconds_*</code>, but the example-app emits <code>example_app_http_requests_total</code> and <code>example_app_http_request_duration_seconds_*</code> &mdash; the prefix never lined up, so the SLOs would have matched zero series. They never ran in production so we never noticed. Sloth migration fixes the metric names while we&rsquo;re in there.</p>
+
+      <h3>7.10 &mdash; The pod-density ceiling</h3>
+
+      <p>Around the time I thought we were done, we hit a fresh class of failure: pods stuck <code>Pending</code> not for resources, not for affinity, but for <code>Too many pods</code>:</p>
+
+<pre><code>0/2 nodes are available: 2 Too many pods.</code></pre>
+
+      <p><code>kubectl get nodes -o jsonpath='{...allocatable.pods}'</code> returns 29. Two <code>m6i.large</code> nodes &times; 29 = 58 max pods. The cluster was running 56. Two slots left. Velero&rsquo;s Helm pre-install hook needed one. The Chaos Mesh <code>chaos-daemon</code> DaemonSet needed one per node. Anything else &mdash; ARC runner ephemeral pods, the next Helm hook, any future workload &mdash; would be <code>Pending</code> forever.</p>
+
+      <p>The CNI&rsquo;s per-node max-pods is computed from per-IP-on-ENI math: <code>m6i.large</code> has 3 ENIs &times; 9 secondary IPs each &asymp; 29 pods. The standard fix is to enable VPC CNI prefix delegation, which makes the CNI carve out <code>/28</code> prefixes from the VPC and serve 16 pod IPs per prefix instead of one. <code>m6i.large</code> jumps to around 110 pods.</p>
+
+      <p>Fix: add <code>configuration_values = jsonencode({env = {ENABLE_PREFIX_DELEGATION = "true", WARM_PREFIX_TARGET = "1"}})</code> to the <code>aws_eks_addon.vpc_cni</code> resource. On a fresh apply this is invisible &mdash; new nodes come up with the higher limit at first boot. On an upgrade against an existing cluster the kubelet&rsquo;s max-pods is locked at startup, so existing nodes have to be cycled before they pick up the new limit. The runbook now documents both paths.</p>
+
+      <p>Side lesson: Velero&rsquo;s &ldquo;Missing&rdquo; status had been blamed on a Kyverno admission webhook flake in earlier diagnoses. That was wrong. The Helm hook pod never got <em>scheduled</em> &mdash; its 48-second failure window was the Job exhausting <code>backoffLimit: 3</code> after three back-to-back <code>FailedScheduling</code> events. I had been chasing webhooks; the answer was capacity.</p>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-03-eks/05-nodes-wide-live.png"
+             alt="kubectl get nodes wide"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">kubectl get nodes -o wide
+          <span class="file">screenshots/phase-1/sprint-03-eks/05-nodes-wide-live.png</span></div>
+        <figcaption><strong>Worker nodes</strong> &mdash; private IPs only, the place where every &ldquo;Too many pods&rdquo; failure traces back to.</figcaption>
+      </figure>
+
+      <h3>7.11 &mdash; Conftest&rsquo;s package-collision footgun</h3>
+
+      <p>Sprint 18&rsquo;s six Rego policies and four test files were all declared <code>package main</code>. Three of them &mdash; <code>disallow-default-namespace</code>, <code>disallow-host-namespaces</code>, <code>require-cost-labels</code> &mdash; each defined a top-level <code>workload_kinds := {...}</code> set constant with <em>different</em> memberships. In OPA, complete rules with the same name in the same package across files merge into a single rule. With three different definitions producing three different sets, that rule produced multiple outputs and the entire policy bundle refused to compile:</p>
+
+<pre><code>Error: cicd/conftest/policies/require-cost-labels.rego:15:
+eval_conflict_error: complete rules must not produce multiple outputs</code></pre>
+
+      <p><code>conftest verify</code> had been failing in CI for a while and nobody had noticed because the CI workflow exit code was being swallowed somewhere &mdash; the policies were being applied to manifests, but the unit tests themselves never ran.</p>
+
+      <p>Fix: refactor each policy into its own subpackage (<code>policies.disallow_default_namespace</code>, <code>policies.require_cost_labels</code>, etc.). Tests reference their own package&rsquo;s <code>deny</code> rule, so each test sees only the denials from its own policy. After the refactor, <code>15 tests, 15 passed</code>. Running the bundle against a deliberately broken Deployment correctly emits 10 distinct violations from 6 policies. Running it against the rendered <code>example-app</code> chart catches two real findings &mdash; the chart uses <code>:latest</code> and doesn&rsquo;t set <code>runAsNonRoot</code> on the container. Both are real bugs the conftest gate exists to catch; both are now ticketed.</p>
+
+      <h3>7.12 &mdash; The label key Kubernetes will not let you create</h3>
+
+      <p>While wiring up the missing <code>dev-apps</code> namespace, the apply failed with:</p>
+
+<pre><code>Namespace "dev-apps" is invalid: metadata.labels: Invalid value: "pel:managed-by":
+name part must consist of alphanumeric characters, '-', '_' or '.'</code></pre>
+
+      <p>The <code>kubernetes/base/namespaces/namespaces.yaml</code> file declared labels like <code>pel:managed-by: kustomize</code> and <code>pel:env: dev</code>. The <code>:</code> character is not legal in a Kubernetes label key &mdash; the rule is <code>[prefix/]name</code> where <code>prefix</code> is a DNS subdomain (separated by <code>/</code>, not <code>:</code>) and <code>name</code> is 63 chars of alphanumeric plus <code>-</code>, <code>_</code>, <code>.</code>.</p>
+
+      <p>So <code>pel:managed-by</code> is malformed. The fix is <code>pel.io/managed-by</code> &mdash; <code>pel.io</code> is the prefix, <code>managed-by</code> is the name. The file had been authored by someone who&rsquo;d seen <code>pod-security.kubernetes.io/enforce</code> in the same file and mentally substituted <code>:</code> for <code>/</code> somewhere along the way. The CI lint chain (yamllint + kubeconform) didn&rsquo;t catch it because kubeconform validates structure against the Kubernetes API schema, and the schema for label keys is <em>checked at admission time</em>, not in the OpenAPI spec.</p>
+
+      <h3>7.13 &mdash; Prefix delegation, the second-order fix, and the AMI that wouldn&rsquo;t listen</h3>
+
+      <p>Fixing the pod-density ceiling from 7.10 turned out to need <em>two</em> changes, not one. The first was obvious: enable <code>ENABLE_PREFIX_DELEGATION=true</code> in the VPC CNI addon configuration via Terraform. <code>terraform plan</code> showed <code>0 to add, 1 to change, 0 to destroy</code> &mdash; a clean in-place update of the addon. Applied it. <code>kubectl describe ds aws-node -n kube-system</code> confirmed the env var was now set. The CNI was, as advertised, allocating <code>/28</code> prefixes from the VPC.</p>
+
+      <p>Then I cycled the nodes. The first hint of trouble was the AWS <code>update-nodegroup-version --force</code> returning <em>Successful</em> in five seconds &mdash; too fast to have actually replaced anything. AWS&rsquo;s <code>--force</code> doesn&rsquo;t force-replace if the AMI version hasn&rsquo;t changed; it just no-ops with a green status. The real path is <code>aws autoscaling start-instance-refresh</code> against the underlying ASG, which is what an EKS managed nodegroup actually proxies to. (Second gotcha along the way: <code>aws eks list-nodegroups --query 'nodegroups[0]'</code> returns the first alphabetically, which in this account is <code>pel-ng-burstable-dev</code> &mdash; the SPOT pool with zero running instances. The real nodes live in <code>pel-ng-general-dev</code>. Always name the nodegroup explicitly.)</p>
+
+      <p>Triggered the right refresh. New nodes came up clean. Old nodes drained and terminated. Cluster looked healthy. Ran the verifier:</p>
+
+<pre><code>kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}  max-pods={.status.allocatable.pods}{"\n"}{end}'
+ip-10-0-92-194  max-pods=29
+ip-10-0-99-38   max-pods=29</code></pre>
+
+      <p>Still 29. Both nodes were <em>brand new</em>, built by an instance refresh that ran <em>after</em> the CNI was using prefix delegation. They should have been 110. They weren&rsquo;t.</p>
+
+      <p>The diagnosis took a <code>kubectl get --raw /api/v1/nodes/&lt;node&gt;/proxy/configz</code> against the new node:</p>
+
+<pre><code>maxPods: 29   mode: None</code></pre>
+
+      <p>The kubelet&rsquo;s <code>--max-pods</code> had been <strong>explicitly set to 29 at boot</strong> by the AL2023 bootstrap script (<code>nodeadm</code>). The bootstrap script computes max-pods from per-IP-on-ENI math at the moment of boot &mdash; three ENIs &times; nine secondary IPs &asymp; 27, plus a couple of reserved slots = 29 &mdash; and writes that into the kubelet&rsquo;s startup config. It does <em>not</em> read the CNI&rsquo;s runtime configuration. So even with the CNI now allocating prefixes and capable of serving 110 IPs per node, the kubelet itself refuses to admit more than 29 pods.</p>
+
+      <p>The fix is a launch-template override. EKS managed nodegroups accept a custom <code>user_data</code> field that they merge with their own bootstrap. The format expected by <code>nodeadm</code> on AL2023 is MIME-multipart with an <code>application/node.eks.aws</code> part containing a YAML <code>NodeConfig</code>:</p>
+
+<pre><code>MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="//"
+
+--//
+Content-Type: application/node.eks.aws
+
+apiVersion: node.eks.aws/v1alpha1
+kind: NodeConfig
+spec:
+  kubelet:
+    config:
+      maxPods: 110
+--//--</code></pre>
+
+      <p>base64-encoded and stuffed into <code>aws_launch_template.user_data</code>. The Terraform change is six lines plus a <code>locals</code> block; <code>terraform plan</code> reports <code>0 to add, 4 to change, 0 to destroy</code> (two launch templates plus the two nodegroups that get bumped to the new template versions). One more <code>start-instance-refresh</code> and the new nodes report <code>max-pods=110</code>.</p>
+
+      <p>The portable lesson: <strong>enabling prefix delegation is a two-step operation, not one.</strong> The CNI addon change tells the network plumbing it can serve more IPs. The launch-template <code>user_data</code> tells the kubelet it can accept more pods. Skip the second step and you get a cluster that <em>could</em> run dense workloads but won&rsquo;t.</p>
+
+      <h3>7.14 &mdash; Kyverno held its own webhook hostage during a node drain</h3>
+
+      <p>The instance refresh in 7.13 didn&rsquo;t just leave us at 29 max-pods. It also briefly bricked the cluster.</p>
+
+      <p>About four minutes into the rolling replacement, with one old node draining and one new node booting, every pod creation in the cluster started failing:</p>
+
+<pre><code>Internal error occurred: failed calling webhook "validate.kyverno.svc-fail":
+failed to call webhook: Post "https://kyverno-svc.kyverno.svc:443/validate/fail?timeout=10s":
+no endpoints available for service "kyverno-svc"</code></pre>
+
+      <p>The error appeared on <code>aws-node</code> (the CNI), <code>aws-load-balancer-controller</code>, <code>ebs-csi-controller</code>, <code>external-secrets</code>, <code>metrics-server</code>, <code>kube-state-metrics</code> &mdash; and on Kyverno&rsquo;s <em>own</em> admission controller ReplicaSet trying to create the replacement pod for the one we&rsquo;d just evicted. The new nodes couldn&rsquo;t get a CNI pod, so they couldn&rsquo;t transition to Ready. Kyverno couldn&rsquo;t reschedule itself onto an unready node. Nothing could recover.</p>
+
+      <p>The chain:</p>
+
+      <ol>
+        <li>Kyverno&rsquo;s admission webhook (<code>validate.kyverno.svc-fail</code>) has <code>failurePolicy: Fail</code> and routes through Service <code>kyverno-svc</code>.</li>
+        <li>Service endpoints come from running pods matching the selector.</li>
+        <li>The only Kyverno admission pod was on the old draining node, evicted by the drain.</li>
+        <li>Service <code>kyverno-svc</code> now had zero endpoints.</li>
+        <li>Every CREATE on the apiserver consults all ValidatingWebhookConfigurations; the kyverno webhook fails to connect; <code>failurePolicy: Fail</code> says deny the request.</li>
+        <li>Kyverno&rsquo;s own ReplicaSet controller can&rsquo;t create a replacement Kyverno pod because the new pod would itself need admission.</li>
+        <li><code>aws-node</code> DaemonSet can&rsquo;t create pods on new nodes for the same reason &mdash; new nodes stay <code>NotReady</code>.</li>
+        <li>Cluster is wedged. No new pods anywhere. No path to recovery without operator intervention.</li>
+      </ol>
+
+      <p>The textbook recovery is to delete the offending <code>ValidatingWebhookConfiguration</code> so admission stops calling the dead Service.</p>
+
+<pre><code>kubectl delete validatingwebhookconfiguration kyverno-resource-validating-webhook-cfg</code></pre>
+
+      <p>Within ten seconds, pod creation succeeded again. <code>aws-node</code> came up on the new nodes; they went Ready; Kyverno&rsquo;s admission controller reached <code>1/1 Running</code>; Kyverno reinstalled its own webhook configurations from its policies. The cluster recovered.</p>
+
+      <p>The root-cause framing matters more than the recovery procedure. The proximate cause is the admission-deadlock pattern: a single-replica admission controller whose webhook has <code>failurePolicy: Fail</code> <em>cannot survive its own pod being evicted</em>. The pattern is well-known &mdash; Kyverno&rsquo;s install docs warn against it, cert-manager&rsquo;s docs warn against it, Google calls it out in Anthos docs. The standard mitigation is multiple replicas plus <code>podAntiAffinity</code> across nodes, so at least one replica always remains Ready during a node drain.</p>
+
+      <p>We had this lab running single-replica Kyverno on purpose. Why? Because the cluster only had 58 total pod slots (29 per node &times; 2 nodes). With Phase 1 + half of Phase 2 deployed, we were running 56 pods. There was no room for HA replicas of anything &mdash; Kyverno, External Secrets, AWS Load Balancer Controller, all of them were single-replica deployments because that was the only thing that fit. <strong>The pod-density ceiling didn&rsquo;t just block velero. It forced every admission controller into a configuration that was a single-node-failure away from cluster-wide outage.</strong></p>
+
+      <p>So the fix order is not &ldquo;delete the webhook config&rdquo; &mdash; that&rsquo;s the recovery, not the fix. The fix is:</p>
+
+      <ol>
+        <li>Raise pod capacity (7.10 + 7.13).</li>
+        <li>Once there&rsquo;s headroom, bump every admission-controller-with-<code>failurePolicy=Fail</code> to multiple replicas with <code>podAntiAffinity</code> spreading them across nodes &mdash; Kyverno admission first because it&rsquo;s the most violent failure mode, then ESO, then anything else that wraps a webhook.</li>
+      </ol>
+
+      <p>For Kyverno specifically, the chart values look like:</p>
+
+<pre><code>admissionController:
+  replicas: 3
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: admission-controller</code></pre>
+
+      <p>That&rsquo;s a follow-up commit, queued behind the prefix-delegation rollout in the runbook.</p>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-07-security/07-clusterpolicies-live.png"
+             alt="Kyverno cluster policies live"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">Kyverno &middot; ClusterPolicies in effect
+          <span class="file">screenshots/phase-1/sprint-07-security/07-clusterpolicies-live.png</span></div>
+        <figcaption><strong>Kyverno ClusterPolicies</strong> &mdash; the same admission stack whose <code>failurePolicy: Fail</code> turned a routine node refresh into a cluster-wide outage.</figcaption>
+      </figure>
+
+      <p>The other lesson is procedural. Cycling all nodes in an EKS managed nodegroup with single-replica critical workloads is functionally equivalent to taking the cluster down. The right operational pattern, even after we have multiple Kyverno replicas, is a <em>staggered</em> refresh with <code>MinHealthyPercentage: 67%</code> and longer warmup windows, so admission controllers always have a Ready endpoint during the transition. The instance refresh I ran here used <code>MinHealthyPercentage: 50</code> &mdash; at single-replica density, that meant the Kyverno pod was eligible for eviction before any replacement was Ready, and the chain in steps 1&ndash;8 above followed deterministically.</p>
+
+      <h3>The pattern across all fourteen</h3>
+
+      <p>A few common shapes are worth naming, because they will repeat:</p>
+
+      <ul>
+        <li><strong>Warm-cluster bugs that only fire cold.</strong> Anything that depends on a manually-applied resource (gp3 SC, <code>dev-apps</code> namespace), a stateful Secret being parsed for the first time (Alertmanager config), or a Helm hook reaching backoff (velero CRDs) is invisible to a running cluster. They surface on a fresh <code>terraform apply</code>. The only defense is to do clean rebuilds regularly &mdash; at least once a week &mdash; and treat every fresh bring-up as a regression test.</li>
+        <li><strong><code>Synced / Healthy</code> is a lie when the underlying status is <code>Unknown</code>.</strong> ArgoCD&rsquo;s two-column status is not a single signal. A flat <code>Unknown</code> sync status means <em>the app never compared desired-to-live state</em>. Read that as red, not green.</li>
+        <li><strong>Helm chart values drift faster than the values files in the repo.</strong> Five of the fourteen bugs are chart upgrades silently breaking a values file (<code>bucketNames</code> path, SSD replicas non-zero, image required, AlertmanagerConfig schema mix-up). The fix is to either pin chart minor versions or to add a CI step that does <code>helm template</code> against every chart on every PR.</li>
+        <li><strong>Read the operator&rsquo;s <code>status.conditions</code>, not the operator&rsquo;s logs.</strong> Prometheus operator, Alertmanager operator, ArgoCD, Velero &mdash; every one of them surfaces the exact reconciliation error in the CR <code>status.conditions</code>. The pod logs are usually a paragraph of timing chatter wrapping a one-line root cause. The CR status is the root cause without the chatter.</li>
+        <li><strong>Configuration is layered; one fix is rarely enough.</strong> Prefix delegation needed the CNI addon update <em>and</em> the kubelet user_data. Velero needed the IRSA wiring <em>and</em> the bucket <em>and</em> the prefix-delegation-driven pod capacity. The first change makes the system <em>capable</em> of the new behavior; subsequent changes make it <em>exhibit</em> it. Always ask: what&rsquo;s the first system that has to <em>learn</em> about this change, and then what&rsquo;s the next one downstream that has to be told too?</li>
+        <li><strong>Single-replica admission controllers with <code>failurePolicy: Fail</code> are a self-deadlock waiting to happen.</strong> 7.14&rsquo;s chain repeats on any node drain, planned or unplanned, of the node hosting the single admission pod. The mitigation is HA replicas with <code>podAntiAffinity</code> across nodes. The trap is that HA replicas need pod headroom, which the same cluster usually doesn&rsquo;t have if it&rsquo;s small enough to be running single-replica admission in the first place &mdash; a configuration that ships fragile by default.</li>
+      </ul>
+
+      <p>I pushed nine commits across the session: gp3 + Sloth migration, observability config fixes, kyverno-policies move, conftest package refactor, namespace label fix, two prefix-delegation Terraform changes (addon + nodeadm user_data), and the session-5 portfolio docs. The cluster is currently mid-recovery from the node cycle &mdash; Kyverno is back, new nodes are Ready, and the second <code>terraform apply</code> + final instance refresh will bring max-pods to 110. The lab still tears down clean. The bugs we hit are still the ones a real platform team hits. The list got longer; the patterns underneath it are the same.</p>
+    </section>
+
+    <hr class="session-divider">
+
+    <!-- 8. STRATEGY -->
+    <section id="strategy">
+      <h2><span class="num">08</span>The strategy that fell out of it</h2>
+
+      <p>The fourteen bugs in Session 5 weren&rsquo;t independent. Underneath them ran a single thread: <strong>the cluster was structurally too small for what we were trying to do.</strong> Two <code>m6i.large</code> nodes at 29 pods each gives 58 slots. Phase 1 baseline alone (DaemonSets, system pods, controllers, ArgoCD, observability) eats ~55&ndash;60. Phase 2 adds chaos-mesh, Falco, Sloth, an example app &mdash; and now you&rsquo;re trying to bin-pack with zero headroom into a layout that has no slack for a node to fail, an admission controller to be unhealthy, or a Helm hook to start a CRD upgrade Job.</p>
+
+      <p>Every one of the bugs above is what that looks like in practice. The Kyverno self-deadlock (7.14) needs a second Kyverno replica on a different node &mdash; but the cluster doesn&rsquo;t have the slots to <em>run</em> a second replica. The Velero CRD upgrade hook (7.10) needs one transient pod &mdash; but every Pending state we hit during the session was the same shape: there&rsquo;s no room for one more pod. The prefix-delegation work (7.13) is the right fix, but it only buys breathing room at the same node count; it doesn&rsquo;t change the shape of the cluster.</p>
+
+      <p>So after the session closed, the next thing I wrote wasn&rsquo;t more code. It was a strategy doc: <code>_project-docs/architecture/02-node-capacity-strategy.md</code>. The summary is short:</p>
+
+      <ul>
+        <li><strong>3&times; <code>m6i.xlarge</code>, not 2&times; <code>m6i.large</code>.</strong> Same dollars-per-pod-slot (110 &rarr; 234 max-pods at exactly 2&times; the price), but four vCPU per node instead of two &mdash; which means Prometheus, Loki, and Tempo finally have CPU headroom for spiky reconciles. Spread across three AZs, the cluster survives losing any one of them.</li>
+        <li><strong>Three layers of capacity, not one.</strong> A <em>static baseline</em> (always on, multi-AZ) for platform addons. A <em>workload pool</em> for tenant apps. A <em>burstable pool</em> on SPOT for chaos, ARC runners, batch &mdash; tainted so only opt-in pods land there. Phase 1 ships these as managed nodegroups; Phase 2 replaces them with Karpenter NodePools.</li>
+        <li><strong>PDB hygiene as a first-class rule.</strong> Every multi-replica platform Deployment gets <code>maxUnavailable: 1</code> (never <code>minAvailable: 100%</code> which deadlocks the moment one replica is unhealthy), plus <code>topologySpreadConstraints</code> to keep replicas on different nodes. The <code>ebs-csi-controller</code> drain failure we hit at the tail of session 5 &mdash; where a self-perpetuating crash loop set <code>currentHealthy=0</code> against <code>expected=2</code>, so the PDB refused every eviction and the node refresh rolled back &mdash; is the case this rule prevents.</li>
+        <li><strong>Drain-test as a gate.</strong> Before any apply that touches launch templates, AMI versions, or node sizes: <code>kubectl drain &lt;node&gt; --ignore-daemonsets --dry-run=server</code> on the most-loaded node. If it errors, the PDB layout is wrong, not the node config. This is the missing safeguard.</li>
+        <li><strong>Karpenter promotion in Phase 2, not Phase 1.</strong> Karpenter would solve a lot of this, but it adds a dependency to bootstrap. Managed nodegroups are predictable for demos and easier to reason about during Phase 1 stabilization. Promote at Sprint 14, after the static baseline is solid.</li>
+        <li><strong>Cost envelope: ~$275/month always-on dev</strong>, or $30&ndash;60/month with disciplined teardown. About $9/day more than the broken sizing. For the headroom we get &mdash; and for not running into the same set of bugs the next time we cold-start &mdash; that&rsquo;s a trivial premium.</li>
+      </ul>
+
+      <p>The acceptance gate for the new strategy is simple and falsifiable: <strong>force-terminate any node with <code>aws ec2 terminate-instances</code> and the cluster stays fully functional within five minutes.</strong> If that doesn&rsquo;t pass, the sizing is still wrong, or the PDB layout still has a deadlock waiting to fire, and I&rsquo;ll find out before a real incident does.</p>
+
+      <p>It&rsquo;s a small redesign on paper. In practice it&rsquo;s the difference between a lab that demonstrates the practice (&ldquo;we ran fourteen bugs to ground in one session&rdquo;) and a lab that demonstrates the <em>operating posture</em> (&ldquo;the next fourteen bugs don&rsquo;t break the cluster while we&rsquo;re fixing them&rdquo;). The strategy doc is the bridge.</p>
+
+      <p>After this commit, the cluster gets torn down and rebuilt against the new sizing. Sprint 10 (Tempo on S3) stays paused at the implementation gate from the start of the session &mdash; but this time it&rsquo;ll come up on a cluster that has room for it. The bugs we found weren&rsquo;t a setback; they were the cluster telling us what it actually needed.</p>
+    </section>
+
+    <hr class="session-divider">
+
+    <!-- 9. SESSION 6 -->
+    <section id="session-6">
+      <h2><span class="num">09</span>Session 6 &mdash; the destroy that wouldn&rsquo;t</h2>
+
+      <p>After the strategy doc landed, the plan was simple: tear the cluster down, edit the Terraform module to the new sizing, apply fresh. <code>terraform destroy -auto-approve</code>, wait fifteen minutes, move on.</p>
+
+      <p>Three runs and four manual unblocks later, the cluster was finally gone. Each unblock surfaces a different way a cluster can be harder to remove than it was to create &mdash; patterns worth naming because they&rsquo;ll repeat on every teardown, planned or unplanned.</p>
+
+      <p>The destroy ran in two passes. The first errored partway through; the second succeeded after manual cleanup of four orphan-resource classes. The pattern across all four is the same: <strong>Kubernetes controllers create AWS resources that Terraform doesn&rsquo;t track, and when the cluster goes away those resources are left holding the VPC.</strong> Terraform deletes everything <em>it</em> created, dutifully &mdash; but TF state has no record of the load balancers, the security groups, the ENIs, or the webhook registrations created by in-cluster controllers reconciling Service / Ingress / Kyverno-policy CRs. So at destroy time, TF tries to delete the VPC, AWS says &ldquo;you still have dependencies in this VPC,&rdquo; and TF gives up.</p>
+
+      <p>Here&rsquo;s the order they surfaced, with the recovery for each.</p>
+
+      <h3>9.1 &mdash; Kyverno&rsquo;s <code>failurePolicy: Fail</code> webhooks survive Kyverno itself</h3>
+
+      <p>The destroy started by ripping the worker nodes out. Every workload pod went down, including Kyverno. But the ten Kyverno <code>ValidatingWebhookConfiguration</code> and <code>MutatingWebhookConfiguration</code> resources stayed registered, because they&rsquo;re cluster-scoped CRs that aren&rsquo;t tied to the Kyverno Deployment&rsquo;s lifecycle. Each of them has <code>failurePolicy: Fail</code> &mdash; meaning any API call the webhook would have validated <em>must</em> succeed in calling the webhook, or the call is rejected.</p>
+
+      <p>The next thing Terraform tried to do was delete the EKS managed addons (<code>coredns</code>, <code>eks-pod-identity-agent</code>, <code>aws-ebs-csi-driver</code>). The EKS API tried to delete those resources, the API server tried to call the Kyverno webhook to validate the delete, and Kyverno&rsquo;s Service had zero healthy endpoints. So the deletes failed with:</p>
+
+<pre><code>AdmissionRequestDenied: failed calling webhook "validate.kyverno.svc-fail":
+no endpoints available for service "kyverno-svc"</code></pre>
+
+      <p>EKS retried, gave up, marked the addons <code>DELETE_FAILED</code>. Terraform aborted. The cluster was left in <code>ACTIVE</code> state with three addons stuck and the rest of the destroy never having even started &mdash; an orphaned EKS control plane accruing $0.10/hr forever, with no obvious path forward in the TF apply log.</p>
+
+      <p>This is the same root cause as the Session 5 Kyverno self-deadlock during node cycling (7.14), but the blast radius is bigger. There, the cluster was healthy but reconciliation stalled until you got a Kyverno pod back. Here, the cluster <em>can&rsquo;t be destroyed</em> until someone with kubectl access manually drops the webhook configs. If the kubeconfig was lost or the operator moved on, the cluster keeps billing indefinitely.</p>
+
+<pre><code># Recovery — drop every Kyverno webhook config; the control plane is still
+# up (EKS never got to delete it), so kubectl still works.
+kubectl get validatingwebhookconfigurations -o name | grep kyverno | xargs -r kubectl delete
+kubectl get mutatingwebhookconfigurations   -o name | grep kyverno | xargs -r kubectl delete</code></pre>
+
+      <p>After that, addon deletes complete in seconds and the destroy moves on.</p>
+
+      <p>The permanent fix is to add a Helm <code>pre-delete</code> hook to the Kyverno release (or a separate small ArgoCD app that owns the webhook configs and has a sync wave that runs <em>before</em> Kyverno is uninstalled), so the webhooks are gone <em>before</em> Kyverno&rsquo;s pods get evicted. Filed in the next-session plan.</p>
+
+      <h3>9.2 &mdash; Versioned S3 buckets refuse to delete</h3>
+
+      <p>The Loki object store (<code>pel-loki-<AWS_ACCOUNT_ID>-dev</code>) is a versioned S3 bucket &mdash; correctly so, because object versioning is a durability requirement for log archives and the bucket has a <code>lifecycle prevent_destroy</code> expectation upstream. But the Terraform resource for the bucket wasn&rsquo;t configured with <code>force_destroy = true</code>, which meant that when destroy got to that bucket, AWS refused:</p>
+
+<pre><code>BucketNotEmpty: The bucket you tried to delete is not empty.
+You must delete all versions in the bucket.</code></pre>
+
+      <p>The bucket had 22 object versions and 9 delete markers. Small. But AWS doesn&rsquo;t care about size &mdash; it cares that <code>DeleteBucket</code> requires <em>every</em> version and <em>every</em> delete marker to be gone first. <code>aws s3 rm --recursive</code> doesn&rsquo;t work on a versioned bucket; it only deletes current versions, and it adds a new delete marker for each, which itself counts as an object preventing bucket deletion. You have to use <code>s3api delete-objects</code> with explicit <code>VersionId</code>s.</p>
+
+<pre><code>BUCKET=pel-loki-<AWS_ACCOUNT_ID>-dev
+aws s3api list-object-versions --bucket $BUCKET \
+  --query '{Objects: Versions[].{Key:Key,VersionId:VersionId}}' &gt; /tmp/v.json
+aws s3api list-object-versions --bucket $BUCKET \
+  --query '{Objects: DeleteMarkers[].{Key:Key,VersionId:VersionId}}' &gt; /tmp/m.json
+aws s3api delete-objects --bucket $BUCKET --delete file:///tmp/v.json
+aws s3api delete-objects --bucket $BUCKET --delete file:///tmp/m.json</code></pre>
+
+      <p>The permanent fix is <code>force_destroy = true</code> on every versioned bucket in the codebase. It only affects <code>terraform destroy</code>; it doesn&rsquo;t weaken in-cluster bucket protections. Same fix needed on <code>pel-velero-*</code>, <code>pel-falco-audit-*</code>, and the future <code>pel-tempo-*</code> bucket from Sprint 10. Audit + patch goes in next-session work.</p>
+
+      <h3>9.3 &mdash; Orphan ELB / NLB hold ENIs in public subnets</h3>
+
+      <p>This one&rsquo;s not strictly a &ldquo;bug&rdquo; &mdash; it&rsquo;s known behavior of the AWS Load Balancer Controller and cloud-controller-manager &mdash; but it deserves writing up because nothing in the destroy log warns you.</p>
+
+      <p>When you create a Kubernetes <code>Service</code> of <code>type=LoadBalancer</code>, the in-cluster cloud-controller-manager creates a Classic ELB and points its target groups at the worker nodes. When you create an <code>Ingress</code> with the AWS LBC ingress class, the LBC creates an NLB (or ALB) the same way. Both LBs are <strong>AWS resources, not Kubernetes resources</strong>, and they&rsquo;re created by reconciling K8s objects &mdash; so Terraform has no record of them.</p>
+
+      <p>At destroy time, the worker nodes go away first (managed nodegroup delete). The Service and Ingress objects are technically still in etcd, but there&rsquo;s nothing to reconcile them, and even if there were, the controllers themselves are gone with the workers. So the two load balancers in this cluster &mdash; a Classic ELB and <code>pel-nlb-dev</code> &mdash; were left running, <em>each with three ENIs attached, one per AZ, in the three public subnets</em>.</p>
+
+      <p>Terraform then tried to delete the three public subnets. AWS refused: each subnet had a load balancer ENI in it. TF retried. AWS kept refusing. After 12 minutes of <code>Still destroying...</code> polling logs I went looking and found the orphans:</p>
+
+<pre><code># What's in those subnets
+aws ec2 describe-network-interfaces \
+  --filters Name=subnet-id,Values=subnet-0167f0a97fa72bcb2 \
+  --query 'NetworkInterfaces[*].{id:NetworkInterfaceId,desc:Description,status:Status}'</code></pre>
+
+      <p>The descriptions tell you exactly what they are: <code>ELB a0e087...</code> (classic) and <code>ELB net/pel-nlb-dev/...</code> (v2). Delete the load balancers, the ENIs detach within 30 seconds, and TF&rsquo;s next subnet-delete poll succeeds.</p>
+
+<pre><code>aws elbv2 delete-load-balancer --load-balancer-arn arn:aws:elasticloadbalancing:us-west-2:&lt;acct&gt;:loadbalancer/net/pel-nlb-dev/&lt;id&gt;
+aws elb   delete-load-balancer --load-balancer-name &lt;classic-elb-name&gt;</code></pre>
+
+      <p>The permanent fix is to teach the destroy runbook to delete all in-cluster <code>Service type=LoadBalancer</code> and <code>Ingress</code> resources <em>before</em> <code>terraform destroy</code> runs. If both <code>kubectl</code> and AWS LBC are still healthy when the deletes go through, the controllers will clean up their AWS resources properly. The teardown sequence becomes: <code>kubectl delete ingress,service --all -A</code> (let controllers reconcile, ~60s), <em>then</em> <code>terraform destroy</code>.</p>
+
+      <h3>9.4 &mdash; Orphan security groups hold the VPC</h3>
+
+      <p>After the subnets finally drained, TF moved on to deleting the VPC itself &mdash; and got stuck again. Three minutes of <code>aws_vpc.this: Still destroying...</code> later, I looked at the VPC and found four security groups still attached, three of which TF didn&rsquo;t create:</p>
+
+<pre><code>sg-01d748d14e32f30b8  k8s-traffic-peleksdev-2e9b0782d1
+sg-06e0af6b52f5a8a0e  k8s-platform-ingressn-43f8392ad5
+sg-0b57bc86dfe38cbcc  k8s-elb-a0e087816822a4a9ba63305a842144e6
+sg-02eef6f8745899c1f  default</code></pre>
+
+      <p>The pattern is the same as 9.3: in-cluster controllers create these SGs as side effects of creating LBs and reconciling traffic routing. The AWS LBC creates <code>k8s-traffic-*</code> for cluster-wide traffic policies. The cloud-controller-manager creates <code>k8s-elb-*</code> for each ELB it provisions. The ingress controller creates <code>k8s-platform-ingressn-*</code> for ingress NLBs. Terraform never sees these create events, so it has no destroy event to fire. AWS won&rsquo;t let you delete a VPC while non-default SGs reference it.</p>
+
+<pre><code># Recovery — delete the three orphan k8s SGs by hand
+for sg in sg-0b57bc86dfe38cbcc sg-06e0af6b52f5a8a0e sg-01d748d14e32f30b8; do
+  aws ec2 delete-security-group --group-id $sg
+done</code></pre>
+
+      <p>The <code>default</code> SG goes with the VPC; you can&rsquo;t delete it directly and you don&rsquo;t need to. Once the other three are gone, TF&rsquo;s next VPC-delete poll succeeds.</p>
+
+      <p>The permanent fix overlaps with 9.3: deleting the in-cluster <code>Service</code>/<code>Ingress</code> resources first lets the controllers clean up <em>their</em> SGs as part of reconciliation. The LBs and SGs are siblings &mdash; kill the LB cleanly, the SG goes with it.</p>
+
+      <h3>Pattern: TF state &ne; AWS state, and destroy exposes the gap</h3>
+
+      <p>The thread connecting 9.1&ndash;9.4 is that the cluster&rsquo;s lifetime created AWS resources outside Terraform&rsquo;s view, and at destroy time TF can&rsquo;t unwind what it didn&rsquo;t put there:</p>
+
+      <ul>
+        <li>9.1: Kyverno&rsquo;s webhook registrations are CRs that survive the Deployment that backs them.</li>
+        <li>9.2: Versioned bucket objects accumulate during cluster lifetime; TF never had visibility into them.</li>
+        <li>9.3: In-cluster controllers create AWS LBs as a <em>side effect</em> of K8s objects.</li>
+        <li>9.4: Same controllers create supporting SGs as a side effect of the LBs.</li>
+      </ul>
+
+      <p>The generalized rule is worth naming: <strong>for any cluster with controllers that create AWS resources from Kubernetes objects (which is to say, any non-trivial cluster), destroy is a two-stage operation. First clean up in-cluster resources whose reconciliation produces AWS state. Only then run <code>terraform destroy</code>.</strong> A safer destroy sequence:</p>
+
+<pre><code># Stage 1 — cluster-side cleanup (controllers still healthy, can self-clean)
+kubectl delete ingress,service --all -A          # AWS LBC + cloud-controller clean up LBs + SGs
+kubectl get validatingwebhookconfigurations -o name | grep kyverno | xargs -r kubectl delete
+kubectl get mutatingwebhookconfigurations   -o name | grep kyverno | xargs -r kubectl delete
+
+# Stage 2 — empty versioned S3 buckets that TF can't force-delete (or fix force_destroy upstream)
+for bucket in pel-loki-* pel-velero-* pel-falco-audit-*; do
+  # ... empty versions + delete markers
+done
+
+# Stage 3 — actual terraform destroy
+terraform destroy -auto-approve</code></pre>
+
+      <p>Better still is to fix the TF source so destroy works without stage 1 and 2:</p>
+      <ul>
+        <li><code>force_destroy = true</code> on every versioned bucket (cheap, one-line).</li>
+        <li>A Kyverno webhook-config pre-delete hook (Helm hook or ArgoCD sync-wave).</li>
+        <li>An LB cleanup hook that runs <code>kubectl delete ingress,service --all</code> as a pre-destroy <code>null_resource</code>.</li>
+      </ul>
+
+      <p>Until those land, the runbook in <code>_project-docs/sessions/BRING-UP-RUNBOOK.md</code> grows a &ldquo;Teardown&rdquo; section that documents the manual unblock commands in the right order. Same recipe every time &mdash; the kind of operational knowledge a real platform team writes down once and reads back at 3 AM.</p>
+
+      <p>The cluster did finally go: <strong><code>Destroy complete! Resources: 34 destroyed.</code></strong> Total elapsed for the destroy (across the two TF runs and four manual interventions): about 45 minutes. Roughly 35 minutes of that was AWS waiting on its own resource teardown timers; the four interventions themselves took maybe 90 seconds. Most of the cost wasn&rsquo;t compute &mdash; it was the time to figure out <em>which</em> of the &ldquo;Still destroying...&rdquo; messages were normal and which were a quiet error condition waiting to surface as the next <code>Error:</code>.</p>
+    </section>
+
+    <hr class="session-divider">
+
+    <section id="evidence">
+      <h2><span class="num">10</span>Visual evidence</h2>
+      <p>Selected captures pulled from the actual cluster &mdash; the AWS consoles that mirror the Terraform we wrote, the dashboards we read while debugging, and the OpenCost UI that makes the spend visible.</p>
+
+      <h3>AWS console &mdash; what Terraform built</h3>
+      <div class="gallery">
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/vpc-console.png" alt="VPC console"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS &middot; VPC<span class="file">phase-1/sprint-02-terraform/vpc-console.png</span></div>
+          <figcaption><strong>VPC</strong> &mdash; <code>pel-vpc-dev</code>.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/subnets-console.png" alt="Subnets"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS &middot; Subnets<span class="file">phase-1/sprint-02-terraform/subnets-console.png</span></div>
+          <figcaption><strong>Subnets</strong> &mdash; 3 AZs, public + private tiers.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/nat-console.png" alt="NAT gateways"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS &middot; NAT<span class="file">phase-1/sprint-02-terraform/nat-console.png</span></div>
+          <figcaption><strong>NAT gateways</strong> &mdash; egress for the private subnets.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/EIP-console.png" alt="EIPs"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS &middot; EIPs<span class="file">phase-1/sprint-02-terraform/EIP-console.png</span></div>
+          <figcaption><strong>Elastic IPs</strong> &mdash; allocated for NAT.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/kms-console.png" alt="KMS keys"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS &middot; KMS<span class="file">phase-1/sprint-02-terraform/kms-console.png</span></div>
+          <figcaption><strong>KMS</strong> &mdash; customer-managed keys for EKS, EBS, S3, Secrets.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/node-groups-console.png" alt="EKS node groups"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS &middot; EKS node groups<span class="file">phase-1/sprint-02-terraform/node-groups-console.png</span></div>
+          <figcaption><strong>EKS managed node groups</strong> &mdash; the ASGs that 7.13&rsquo;s instance-refresh dance ran against.</figcaption>
+        </figure>
+      </div>
+
+      <h3>Platform layer &mdash; ArgoCD &amp; pods</h3>
+      <div class="gallery">
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-05-gitops/02-argocd-ui.png" alt="ArgoCD UI"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">ArgoCD &middot; UI<span class="file">phase-1/sprint-05-gitops/02-argocd-ui.png</span></div>
+          <figcaption><strong>ArgoCD UI</strong> &mdash; the GitOps brain.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/platform-apps.png" alt="Platform apps"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">ArgoCD &middot; platform apps<span class="file">phase-1/sprint-04-cluster-bootstrap/platform-apps.png</span></div>
+          <figcaption><strong>Platform applications</strong> &mdash; the app-of-apps tree expanded.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/pltform-system.png" alt="platform-system pods"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">platform-system pods<span class="file">phase-1/sprint-04-cluster-bootstrap/pltform-system.png</span></div>
+          <figcaption><strong>platform-system pods</strong> &mdash; controllers, ingress, cert-manager, ESO.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/07-all-apps-healthy-session7.png" alt="all apps healthy"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">All apps Healthy<span class="file">phase-1/sprint-04-cluster-bootstrap/07-all-apps-healthy-session7.png</span></div>
+          <figcaption><strong>All apps Healthy</strong> &mdash; the green state we keep chasing back to.</figcaption>
+        </figure>
+      </div>
+
+      <h3>Observability &mdash; what we read while debugging</h3>
+      <div class="gallery">
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-06-observability/Prometheus-Overview-Dashboards-Grafana.png" alt="Prometheus overview"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Grafana &middot; Prometheus overview<span class="file">phase-1/sprint-06-observability/Prometheus-Overview-Dashboards-Grafana.png</span></div>
+          <figcaption><strong>Prometheus overview</strong> &mdash; scrape health, ingestion rate.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-06-observability/Alertmanager-Overview-Dashboards-Grafana.png" alt="Alertmanager"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Grafana &middot; Alertmanager<span class="file">phase-1/sprint-06-observability/Alertmanager-Overview-Dashboards-Grafana.png</span></div>
+          <figcaption><strong>Alertmanager</strong> &mdash; the schema-drift victim of 7.3.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-06-observability/Kubernetes-Compute-Resources-Node-Pods-Dashboards-Grafana.png" alt="node pods"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Grafana &middot; Node pods<span class="file">phase-1/sprint-06-observability/Kubernetes-Compute-Resources-Node-Pods-Dashboards-Grafana.png</span></div>
+          <figcaption><strong>Compute / node pods</strong> &mdash; the dashboard that shows the 29-pod ceiling in real time.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-06-observability/Kubernetes-Networking-Cluster-Dashboards-Grafana.png" alt="networking"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Grafana &middot; Networking<span class="file">phase-1/sprint-06-observability/Kubernetes-Networking-Cluster-Dashboards-Grafana.png</span></div>
+          <figcaption><strong>Networking / cluster</strong> &mdash; flow rates across namespaces.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-06-observability/Node-Exporter-Nodes-Dashboards-Grafana.png" alt="node exporter"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Grafana &middot; Node exporter<span class="file">phase-1/sprint-06-observability/Node-Exporter-Nodes-Dashboards-Grafana.png</span></div>
+          <figcaption><strong>Node exporter</strong> &mdash; per-node CPU / mem / disk.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-06-observability/Kubernetes-Persistent-Volumes-Dashboards-Grafana.png" alt="PVs"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Grafana &middot; Persistent volumes<span class="file">phase-1/sprint-06-observability/Kubernetes-Persistent-Volumes-Dashboards-Grafana.png</span></div>
+          <figcaption><strong>Persistent volumes</strong> &mdash; the gp3 EBS volumes from 4.12 / 7.1, now bound.</figcaption>
+        </figure>
+      </div>
+
+      <h3>FinOps &mdash; OpenCost &amp; cost labels</h3>
+      <div class="gallery">
+        <figure class="screenshot">
+          <img src="screenshots/phase-2/sprint-14-opencost/opencost-35-82-130-149-nip-io-1.png" alt="opencost"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">OpenCost &middot; namespace breakdown<span class="file">phase-2/sprint-14-opencost/opencost-35-82-130-149-nip-io-1.png</span></div>
+          <figcaption><strong>OpenCost</strong> &mdash; namespace spend allocation.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-2/sprint-14-opencost/opencost-35-82-130-149-nip-io-2.png" alt="opencost 2"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">OpenCost &middot; allocation drill-down<span class="file">phase-2/sprint-14-opencost/opencost-35-82-130-149-nip-io-2.png</span></div>
+          <figcaption><strong>OpenCost</strong> &mdash; drill-down by controller.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-2/sprint-14-opencost/02-opencost-cost-by-ns.png" alt="cost by ns"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">OpenCost &middot; cost by namespace<span class="file">phase-2/sprint-14-opencost/02-opencost-cost-by-ns.png</span></div>
+          <figcaption><strong>Cost by namespace</strong> &mdash; the screenshot that makes the spend feel real.</figcaption>
+        </figure>
+      </div>
+
+      <h3>Reliability &mdash; chaos, backup, security</h3>
+      <div class="gallery">
+        <figure class="screenshot">
+          <img src="screenshots/phase-2/sprint-13-chaos/Chaos-Mesh.png" alt="Chaos Mesh"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Chaos Mesh<span class="file">phase-2/sprint-13-chaos/Chaos-Mesh.png</span></div>
+          <figcaption><strong>Chaos Mesh</strong> &mdash; the chaos engineering surface deployed in Phase 2.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-2/sprint-12-velero/valero.png" alt="Velero"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Velero<span class="file">phase-2/sprint-12-velero/valero.png</span></div>
+          <figcaption><strong>Velero</strong> &mdash; the chart whose CRD-upgrade hook caused the entire bitnami/kubectl saga.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-2/sprint-17-falco/02-falco-alerts.png" alt="Falco alerts"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">Falco &middot; alerts<span class="file">phase-2/sprint-17-falco/02-falco-alerts.png</span></div>
+          <figcaption><strong>Falco</strong> &mdash; runtime detection alerts.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <footer>
+      <p>Written 2026-05-15. Sessions 5 and 6 added 2026-05-16. This is the live state of platform-engineering-lab.</p>
+      <p>For component-level reference material, see <a href="index.html">the deep-dive portfolio page</a> and <a href="eks-and-platform-deep-dive.md"><code>eks-and-platform-deep-dive.md</code></a>.</p>
+    </footer>
+
+  </main>
+
+</div>
+
+</body>
+</html>

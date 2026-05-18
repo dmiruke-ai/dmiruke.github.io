@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EKS & Platform Engineering Lab — Deep Dive</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-soft: #161922;
+    --bg-card: #1c2030;
+    --border: #2a2f3e;
+    --fg: #e6e8ee;
+    --fg-dim: #9da4b3;
+    --fg-muted: #6c7385;
+    --accent: #6aa7ff;
+    --accent-soft: #2c5aa033;
+    --green: #5fc77a;
+    --amber: #f0b95c;
+    --red: #f06c6c;
+    --code-bg: #0a0c12;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* layout */
+  .wrap { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--bg-soft); border-right: 1px solid var(--border);
+    padding: 32px 24px;
+    font-size: 13px;
+  }
+  nav.toc h1 { font-size: 14px; margin: 0 0 8px; color: var(--fg); letter-spacing: 0.3px; }
+  nav.toc .sub { color: var(--fg-muted); font-size: 11px; margin: 0 0 24px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: section; }
+  nav.toc ol li { counter-increment: section; margin: 4px 0; }
+  nav.toc ol li a {
+    color: var(--fg-dim); display: block; padding: 6px 10px;
+    border-radius: 4px; transition: all 0.15s;
+  }
+  nav.toc ol li a::before { content: counter(section) ". "; color: var(--fg-muted); }
+  nav.toc ol li a:hover { background: var(--bg-card); color: var(--fg); text-decoration: none; }
+
+  main { padding: 40px 56px; max-width: 1100px; }
+
+  /* header */
+  header.hero {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px;
+    margin-bottom: 40px;
+  }
+  header.hero h1 {
+    font-size: 32px; margin: 0 0 8px;
+    background: linear-gradient(120deg, var(--accent), #b48cff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  header.hero .tagline { color: var(--fg-dim); font-size: 16px; margin: 0 0 18px; }
+  header.hero .meta { display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; color: var(--fg-muted); }
+  header.hero .meta span strong { color: var(--fg); font-weight: 500; }
+
+  /* sections */
+  section { margin-bottom: 56px; scroll-margin-top: 20px; }
+  section h2 {
+    font-size: 22px; margin: 0 0 4px;
+    color: var(--fg); letter-spacing: 0.2px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  section h2 .num { color: var(--accent); margin-right: 10px; font-weight: 500; }
+  section h3 { font-size: 17px; margin: 28px 0 12px; color: var(--fg); }
+  section h4 { font-size: 14px; margin: 20px 0 8px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.6px; }
+  section p { margin: 12px 0; color: var(--fg); }
+  section ul, section ol { padding-left: 22px; }
+  section li { margin: 4px 0; }
+
+  /* cards */
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px 24px; margin: 16px 0;
+  }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px; margin: 20px 0;
+  }
+  .grid .card { margin: 0; }
+  .card .label { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .card h4 { margin: 4px 0 8px; color: var(--fg); font-size: 15px; letter-spacing: normal; text-transform: none; }
+  .card p { margin: 4px 0; font-size: 13px; }
+  .card .small { font-size: 12px; color: var(--fg-dim); }
+
+  /* code & ASCII */
+  pre, code { font-family: var(--font-mono); }
+  code { background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.92em; color: #cfd5e3; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    padding: 16px 18px; border-radius: 6px; overflow-x: auto;
+    font-size: 12.5px; line-height: 1.55; margin: 16px 0;
+  }
+  pre code { background: transparent; padding: 0; }
+  pre.diagram { font-size: 11.5px; line-height: 1.4; }
+
+  /* architecture diagram (HTML/CSS box style) */
+  .arch-diagram { margin: 28px 0; }
+  .arch-diagram .layer-row {
+    display: flex; justify-content: center; gap: 32px;
+    align-items: stretch; flex-wrap: wrap;
+  }
+  .arch-diagram .arrow-v {
+    text-align: center; color: var(--accent);
+    font-size: 18px; line-height: 1; padding: 6px 0;
+  }
+  .arch-diagram .arrow-v small {
+    display: block; font-family: var(--font-mono);
+    font-size: 10.5px; color: var(--fg-muted); margin-top: 4px;
+  }
+  .arch-diagram .arrow-h {
+    align-self: center;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--fg-muted); white-space: nowrap;
+    padding: 0 6px; position: relative;
+  }
+  .arch-diagram .arrow-h::after {
+    content: " →"; color: var(--accent);
+  }
+  .arch-diagram .arch-box {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 18px; position: relative;
+    min-width: 200px;
+  }
+  .arch-diagram .arch-box .box-title {
+    font-size: 12px; font-weight: 500; color: var(--fg);
+    margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .arch-diagram .arch-box .box-body {
+    font-family: var(--font-mono); font-size: 11.5px;
+    color: var(--fg-dim);
+  }
+  .arch-diagram .workstation { border-left: 3px solid var(--fg-muted); }
+  .arch-diagram .github      { border-left: 3px solid #b48cff; }
+  .arch-diagram .aws-account {
+    border: 1px solid #f0b95c66;
+    background: linear-gradient(180deg, #221c10, var(--bg-card));
+    padding: 22px 22px 18px;
+    margin: 14px 0;
+  }
+  .arch-diagram .aws-account > .box-title { color: var(--amber); font-size: 13px; }
+  .arch-diagram .aws-services {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 10px 0 18px;
+  }
+  .arch-diagram .aws-services span {
+    background: var(--bg-soft); color: var(--fg-dim);
+    padding: 4px 10px; border-radius: 4px;
+    font-family: var(--font-mono); font-size: 11px;
+    border: 1px solid var(--border);
+  }
+  .arch-diagram .vpc {
+    border: 1px solid #6aa7ff66;
+    background: linear-gradient(180deg, #0f1a30, var(--bg-card));
+    margin: 12px 0 0;
+  }
+  .arch-diagram .vpc > .box-title { color: var(--accent); font-size: 13px; }
+  .arch-diagram .vpc-network {
+    display: flex; flex-direction: column; gap: 4px;
+    margin: 8px 0 16px;
+    font-family: var(--font-mono); font-size: 11.5px;
+    color: var(--fg-dim);
+  }
+  .arch-diagram .vpc-network code {
+    background: transparent; padding: 0;
+    color: var(--fg);
+  }
+  .arch-diagram .eks {
+    border: 1px solid #5fc77a66;
+    background: linear-gradient(180deg, #0f2418, var(--bg-card));
+    margin: 0;
+  }
+  .arch-diagram .eks > .box-title { color: var(--green); font-size: 13px; }
+  .arch-diagram .ns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px; margin-top: 14px;
+  }
+  .arch-diagram .ns-card {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 12px;
+  }
+  .arch-diagram .ns-card .ns-label {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--accent); margin-bottom: 6px;
+    letter-spacing: 0.3px;
+  }
+  .arch-diagram .ns-card .ns-body {
+    font-family: var(--font-mono); font-size: 11.5px;
+    color: var(--fg); line-height: 1.6;
+  }
+  .arch-diagram .ns-card .ns-body em {
+    color: var(--fg-muted); font-style: normal; font-size: 10.5px;
+  }
+  .arch-diagram .ns-card.muted { opacity: 0.85; padding: 8px 12px; }
+  .arch-diagram .ns-card.muted .ns-body { font-size: 11px; color: var(--fg-dim); }
+
+  /* tables */
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+    font-size: 13.5px;
+  }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: var(--bg-soft); color: var(--fg-dim); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:hover td { background: var(--bg-soft); }
+
+  /* status badges */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .badge.healthy { background: #1f3d29; color: var(--green); }
+  .badge.warn    { background: #3d3220; color: var(--amber); }
+  .badge.broken  { background: #3d2020; color: var(--red); }
+  .badge.info    { background: var(--accent-soft); color: var(--accent); }
+
+  /* screenshot slot */
+  figure.screenshot {
+    margin: 24px 0; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; text-align: center;
+  }
+  figure.screenshot img {
+    max-width: 100%; height: auto; border-radius: 4px;
+    border: 1px solid var(--border); display: block; margin: 0 auto;
+  }
+  figure.screenshot .placeholder {
+    min-height: 280px; background:
+      repeating-linear-gradient(45deg, #1a1d28, #1a1d28 10px, #1e2230 10px, #1e2230 20px);
+    border: 1px dashed var(--border); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    color: var(--fg-muted); font-family: var(--font-mono); font-size: 12px; padding: 24px;
+  }
+  figure.screenshot .placeholder .file { color: var(--accent); font-size: 13px; margin-top: 8px; }
+  figure.screenshot figcaption {
+    font-size: 12.5px; color: var(--fg-dim); margin-top: 10px; padding: 0 16px;
+  }
+  figure.screenshot figcaption strong { color: var(--fg); }
+
+  /* problem cards */
+  .problem {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 18px 22px; margin: 18px 0;
+  }
+  .problem h3 { margin-top: 0; }
+  .problem .row { display: grid; grid-template-columns: 110px 1fr; gap: 8px; margin: 6px 0; font-size: 13.5px; }
+  .problem .row strong { color: var(--fg-dim); font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+
+  /* collapsible sprint folders */
+  details.sprint {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 6px; margin: 10px 0; overflow: hidden;
+  }
+  details.sprint summary {
+    cursor: pointer; padding: 14px 22px; font-weight: 500; font-size: 14px;
+    list-style: none; display: flex; align-items: center; justify-content: space-between;
+    transition: background 0.15s;
+  }
+  details.sprint summary::-webkit-details-marker { display: none; }
+  details.sprint summary::before {
+    content: '▶'; margin-right: 12px; font-size: 9px;
+    color: var(--accent); transition: transform 0.2s; display: inline-block;
+  }
+  details.sprint[open] > summary::before { transform: rotate(90deg); }
+  details.sprint summary:hover { background: var(--bg-soft); }
+  details.sprint summary .meta { color: var(--fg-muted); font-size: 12px; font-weight: 400; }
+  details.sprint summary .title { display: flex; align-items: center; flex: 1; }
+  .gallery-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px; padding: 8px 20px 20px;
+  }
+  .gallery-grid figure.screenshot { margin: 0; padding: 8px; }
+  .gallery-grid figure.screenshot .placeholder { min-height: 130px; font-size: 10.5px; padding: 14px; }
+  .gallery-grid figure.screenshot .placeholder .file { font-size: 11px; word-break: break-all; }
+  .gallery-grid figure.screenshot figcaption { font-size: 11.5px; margin-top: 6px; padding: 0 4px; line-height: 1.45; }
+  .phase-header { margin: 32px 0 12px; font-size: 14px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+
+  /* footer */
+  footer { border-top: 1px solid var(--border); padding-top: 28px; margin-top: 60px; color: var(--fg-muted); font-size: 12px; }
+
+  /* small */
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: 1fr; }
+    nav.toc { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <h1>platform-engineering-lab</h1>
+    <p class="sub">EKS · ArgoCD · IRSA · Observability</p>
+    <ol>
+      <li><a href="#purpose">Purpose</a></li>
+      <li><a href="#principles">Design Principles</a></li>
+      <li><a href="#phases">Phase Model</a></li>
+      <li><a href="#architecture">Phase 1 / 2 Architecture</a></li>
+      <li><a href="#components">Component Catalog</a></li>
+      <li><a href="#problems">Problems & Solutions</a></li>
+      <li><a href="#ops">Operational Workflow</a></li>
+      <li><a href="#status">Status Snapshot</a></li>
+      <li><a href="#gallery">Capture Gallery</a></li>
+    </ol>
+    <p style="margin-top:28px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--fg-muted);">
+      Companion blog:<br>
+      <a href="blog-cluster-build-story.html" style="display:block;margin-top:6px;color:var(--accent);">→ Build story (plan, bugs, fixes)</a>
+    </p>
+  </nav>
+
+  <main>
+
+    <header class="hero">
+      <h1>EKS &amp; Platform Engineering Lab</h1>
+      <p class="tagline">A production-grade reference architecture demonstrating how a real platform team designs, provisions, secures, deploys, observes, and operates infrastructure.</p>
+      <div class="meta">
+        <span><strong>Cloud:</strong> AWS · us-west-2</span>
+        <span><strong>EKS:</strong> v1.34 (standard support)</span>
+        <span><strong>GitOps:</strong> ArgoCD app-of-apps</span>
+        <span><strong>Account:</strong> <AWS_ACCOUNT_ID></span>
+        <span><strong>Snapshot:</strong> 2026-05-15</span>
+      </div>
+      <p style="margin:18px 0 0;font-size:13px;color:var(--fg-dim);">
+        Want the narrative version? Read the
+        <a href="blog-cluster-build-story.html"><strong>build-story blog</strong></a>
+        &mdash; the plan, the bugs, and the fixes across sessions 1&ndash;6.
+      </p>
+    </header>
+
+    <!-- 1. PURPOSE -->
+    <section id="purpose">
+      <h2><span class="num">01</span>Purpose</h2>
+      <p>This is <strong>not</strong> &ldquo;deploy Kubernetes and call it a day.&rdquo; It is the full operational picture an internal platform team would actually own:</p>
+      <ul>
+        <li>Multi-environment AWS infrastructure provisioned by Terraform with a remote backend, KMS, IRSA, OIDC, NAT egress, multi-AZ private subnets.</li>
+        <li>A complete in-cluster platform layer: ingress, DNS, TLS, secrets, scaling, policy, observability, tracing, logging, backup, cost.</li>
+        <li>Pull-based GitOps via ArgoCD with app-of-apps, sync waves, ApplicationSets.</li>
+        <li>CI/CD via GitHub Actions reusable workflows authenticated via OIDC.</li>
+        <li>Policy-as-code (Kyverno cluster-level, Checkov in CI).</li>
+        <li>A layered phase model that intentionally <em>delays</em> complexity until earlier layers are stable.</li>
+      </ul>
+      <p>Audience: the author&rsquo;s portfolio. Demonstrates architect → build → debug → operate — not just &ldquo;wrote Terraform.&rdquo;</p>
+    </section>
+
+    <!-- 2. PRINCIPLES -->
+    <section id="principles">
+      <h2><span class="num">02</span>Design Principles</h2>
+
+      <h3>Layer-by-layer build order</h3>
+      <pre class="diagram">Layer 5  Agentic / Self-Service     ← agents/, platform-services/
+Layer 4  Reliability / FinOps       ← reliability/, finops/
+Layer 3  Security / Observability   ← security/, observability/
+Layer 2  Workloads + GitOps         ← kubernetes/, gitops/, cicd/
+Layer 1  Infrastructure (cloud)     ← infrastructure/</pre>
+      <p>A failure at layer N is <strong>never</strong> fixed by changing layer N+1. The dependency direction is strictly downward.</p>
+
+      <h3>Iterative apply cadence (Directive 02)</h3>
+      <p>implement → local lint → apply to dev → validate → fix → destroy → next sprint. Never more than one sprint sits &ldquo;implemented but unapplied.&rdquo; Monolithic-first hides bugs; layer-by-layer surfaces them in 25-file chunks.</p>
+
+      <h3>No long-lived credentials</h3>
+      <ul>
+        <li>GitHub Actions → AWS via OIDC <code>AssumeRoleWithWebIdentity</code></li>
+        <li>In-cluster controllers → AWS via IRSA, never node-role</li>
+        <li>App secrets → External Secrets Operator pulling from AWS Secrets Manager</li>
+      </ul>
+
+      <h3>Production-realistic, not flashy</h3>
+      <p>Boring tech preferred over novel. Multi-env (<code>dev</code> → <code>staging</code> → <code>prod</code>) overlays from day one, not bolted on later. Domains are top-level directories the way a real platform org would structure them.</p>
+    </section>
+
+    <!-- 3. PHASES -->
+    <section id="phases">
+      <h2><span class="num">03</span>Phase Model</h2>
+      <table>
+        <thead><tr><th>Phase</th><th>Name</th><th>What ships</th><th>Layers</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge healthy">✓ 1</span></td><td>MVP</td><td>VPC, EKS, ingress-nginx, cert-manager, ExternalDNS, ArgoCD self-managed, Prometheus + Grafana + Loki, Kyverno baseline, Trivy/Checkov CI</td><td>1–3</td></tr>
+          <tr><td><span class="badge healthy">✓ 2</span></td><td>Reliability</td><td>OpenTelemetry, Tempo, Velero, OpenCost, chaos engineering, DR drills</td><td>3↑, 4</td></tr>
+          <tr><td><span class="badge info">3</span></td><td>Internal Platform</td><td>Backstage, self-service templates, golden paths</td><td>5</td></tr>
+          <tr><td><span class="badge info">4</span></td><td>Agentic</td><td>LangGraph orchestration, intent parser, Terraform generation, FinOps-aware planning</td><td>5</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Intentionally skipped in Phase 1:</strong> multi-region, GPU pools, service mesh, Tempo (originally), Falco (originally), advanced OPA, ephemeral envs.</p>
+    </section>
+
+    <!-- 4. ARCHITECTURE -->
+    <section id="architecture">
+      <h2><span class="num">04</span>Phase 1 / 2 Architecture</h2>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-03-eks/01-eks-console.png"
+             alt="EKS cluster overview"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">
+          AWS Console · EKS cluster overview
+          <span class="file">screenshots/phase-1/sprint-03-eks/01-eks-console.png</span>
+        </div>
+        <figcaption><strong>EKS cluster overview</strong> — <code>pel-eks-dev</code> on v1.34, 2 × m6i.large nodes across 2 AZs.</figcaption>
+      </figure>
+
+      <div class="arch-diagram">
+
+        <div class="layer-row">
+          <div class="arch-box workstation">
+            <div class="box-title">Operator workstation</div>
+            <div class="box-body">make tf-apply &middot; kube-context &middot; argocd app sync</div>
+          </div>
+        </div>
+
+        <div class="arrow-v">▼</div>
+
+        <div class="layer-row">
+          <div class="arch-box github">
+            <div class="box-title">GitHub repo</div>
+            <div class="box-body">monorepo</div>
+          </div>
+          <div class="arrow-h">PR / push</div>
+          <div class="arch-box github">
+            <div class="box-title">GitHub Actions</div>
+            <div class="box-body">reusable workflows &middot; OIDC</div>
+          </div>
+        </div>
+
+        <div class="arrow-v">▼<small>AssumeRoleWithWebIdentity</small></div>
+
+        <div class="arch-box aws-account">
+          <div class="box-title">☁ AWS Account <AWS_ACCOUNT_ID> &middot; us-west-2</div>
+          <div class="aws-services">
+            <span>IAM / OIDC trust</span>
+            <span>KMS (eks &middot; ebs &middot; s3 &middot; secrets)</span>
+            <span>S3 pel-tfstate-* &middot; pel-loki-* &middot; pel-flowlogs-* &middot; pel-alb-logs-*</span>
+            <span>ECR pel/example-app &middot; pel/ttl-teardown</span>
+            <span>Route 53</span>
+            <span>Secrets Manager</span>
+            <span>CloudWatch Logs</span>
+          </div>
+
+          <div class="arch-box vpc">
+            <div class="box-title">VPC 10.0.0.0/16 &middot; 3 AZs</div>
+            <div class="vpc-network">
+              <span>IGW → public subnets → <code>NLB (ingress-nginx)</code></span>
+              <span>private subnets ← NAT GW(s) → <code>nodes</code></span>
+            </div>
+
+            <div class="arch-box eks">
+              <div class="box-title">EKS Cluster pel-eks-dev (v1.34)</div>
+
+              <div class="ns-grid">
+                <div class="ns-card">
+                  <div class="ns-label">ns: argocd</div>
+                  <div class="ns-body">
+                    ArgoCD<br>
+                    <em>app-of-apps</em><br>
+                    <em>ApplicationSets</em><br>
+                    <em>self-managed</em>
+                  </div>
+                </div>
+
+                <div class="ns-card">
+                  <div class="ns-label">ns: platform-system</div>
+                  <div class="ns-body">
+                    ingress-nginx<br>
+                    aws-load-balancer-controller<br>
+                    cert-manager<br>
+                    external-dns<br>
+                    external-secrets<br>
+                    metrics-server<br>
+                    goldilocks
+                  </div>
+                </div>
+
+                <div class="ns-card">
+                  <div class="ns-label">ns: observability</div>
+                  <div class="ns-body">
+                    kube-prometheus-stack<br>
+                    Prometheus → <em>EBS</em><br>
+                    Grafana<br>
+                    Loki → <em>S3</em><br>
+                    Tempo → <em>S3</em><br>
+                    OTel Collector<br>
+                    Pyrra (SLO ops)<br>
+                    Alertmanager
+                  </div>
+                </div>
+
+                <div class="ns-card">
+                  <div class="ns-label">ns: kyverno</div>
+                  <div class="ns-body">Kyverno + ClusterPolicies</div>
+                </div>
+
+                <div class="ns-card">
+                  <div class="ns-label">ns: falco</div>
+                  <div class="ns-body">Falco <em>(runtime security)</em></div>
+                </div>
+
+                <div class="ns-card">
+                  <div class="ns-label">ns: finops</div>
+                  <div class="ns-body">OpenCost</div>
+                </div>
+
+                <div class="ns-card">
+                  <div class="ns-label">ns: velero</div>
+                  <div class="ns-body">Velero <em>(snapshots → S3)</em></div>
+                </div>
+
+                <div class="ns-card muted">
+                  <div class="ns-label">ns: chaos-mesh</div>
+                  <div class="ns-body">Chaos Mesh</div>
+                </div>
+
+                <div class="ns-card muted">
+                  <div class="ns-label">ns: arc-system</div>
+                  <div class="ns-body">GitHub Actions runners</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <h3>AWS console &mdash; the EKS surface</h3>
+      <div class="gallery-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-03-eks/eks-console.png" alt="EKS console"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS Console · EKS cluster<span class="file">screenshots/phase-1/sprint-03-eks/eks-console.png</span></div>
+          <figcaption><strong>EKS cluster</strong> &mdash; <code>pel-eks-dev</code> on v1.34, standard-support window through Dec 2026.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/node-groups-console.png" alt="EKS managed node groups"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS Console · EKS node groups<span class="file">screenshots/phase-1/sprint-02-terraform/node-groups-console.png</span></div>
+          <figcaption><strong>Managed node groups</strong> &mdash; the ASGs that proxy <code>start-instance-refresh</code> when AMIs roll.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-03-eks/02-nodes-m6i-xlarge.png" alt="kubectl get nodes"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">kubectl get nodes<span class="file">screenshots/phase-1/sprint-03-eks/02-nodes-m6i-xlarge.png</span></div>
+          <figcaption><strong>Worker nodes</strong> &mdash; <code>kubectl get nodes</code>, 3&times;<code>m6i.xlarge</code> spread across AZs.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-03-eks/05-nodes-wide-live.png" alt="kubectl get nodes -o wide"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">kubectl get nodes -o wide<span class="file">screenshots/phase-1/sprint-03-eks/05-nodes-wide-live.png</span></div>
+          <figcaption><strong>Nodes (wide)</strong> &mdash; private IPs only, AL2023 AMI, kubelet <code>maxPods</code> after the prefix-delegation fix.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-03-eks/01-kubectl-get-nodes.png" alt="kubectl ready state"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">kubectl get nodes &middot; Ready state<span class="file">screenshots/phase-1/sprint-03-eks/01-kubectl-get-nodes.png</span></div>
+          <figcaption><strong>Ready state</strong> &mdash; freshly built nodes joining the cluster.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-03-eks/vpc.png" alt="VPC for EKS"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">EKS &middot; networking detail<span class="file">screenshots/phase-1/sprint-03-eks/vpc.png</span></div>
+          <figcaption><strong>EKS networking</strong> &mdash; subnet placement and security-group bindings for the control plane.</figcaption>
+        </figure>
+      </div>
+
+      <h3>VPC</h3>
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-02-terraform/01-vpc-console.png"
+             alt="VPC 3-AZ layout"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">
+          AWS Console · VPC dashboard, 3 AZs / 9 subnets
+          <span class="file">screenshots/phase-1/sprint-02-terraform/01-vpc-console.png</span>
+        </div>
+        <figcaption><strong>VPC layout</strong> — 3 AZs, 3 subnet tiers (public/private/intra), 1 NAT per AZ.</figcaption>
+      </figure>
+
+      <div class="gallery-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/subnets-console.png" alt="Subnets console"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS Console · Subnets<span class="file">screenshots/phase-1/sprint-02-terraform/subnets-console.png</span></div>
+          <figcaption><strong>Subnets</strong> &mdash; public / private / intra across <code>us-west-2a/b/c</code>.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/nat-console.png" alt="NAT gateways"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS Console · NAT gateways<span class="file">screenshots/phase-1/sprint-02-terraform/nat-console.png</span></div>
+          <figcaption><strong>NAT gateways</strong> &mdash; one per AZ; the only egress path for private subnets.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/EIP-console.png" alt="EIPs"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS Console · Elastic IPs<span class="file">screenshots/phase-1/sprint-02-terraform/EIP-console.png</span></div>
+          <figcaption><strong>Elastic IPs</strong> &mdash; pinned to the NATs, the outbound identity for everything in the cluster.</figcaption>
+        </figure>
+        <figure class="screenshot">
+          <img src="screenshots/phase-1/sprint-02-terraform/kms-console.png" alt="KMS keys"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="placeholder" style="display:none;">AWS Console · KMS<span class="file">screenshots/phase-1/sprint-02-terraform/kms-console.png</span></div>
+          <figcaption><strong>KMS keys</strong> &mdash; customer-managed (<code>pel-eks</code>, <code>pel-ebs</code>, <code>pel-s3</code>, <code>pel-secrets</code>); the EBS key holds the <code>kms:CreateGrant</code> conditional we needed for node joins.</figcaption>
+        </figure>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="label">Network</div>
+          <h4>VPC 10.0.0.0/16</h4>
+          <p class="small">3 AZs (us-west-2a/b/c) · public/private/intra subnets per AZ. Nodes have no public IPs; egress via NAT only.</p>
+        </div>
+        <div class="card">
+          <div class="label">Cluster</div>
+          <h4>EKS pel-eks-dev · v1.34</h4>
+          <p class="small">Private nodes (2× m6i.large). Public endpoint CIDR-restricted to operator IP. KMS-encrypted EBS root volumes.</p>
+        </div>
+        <div class="card">
+          <div class="label">Identity</div>
+          <h4>IRSA + OIDC</h4>
+          <p class="small">Every controller has a dedicated IAM role assumed via the cluster&rsquo;s OIDC provider. Three GHA roles: plan, apply, ecr-push.</p>
+        </div>
+      </div>
+
+      <h3>IRSA web</h3>
+      <table>
+        <thead><tr><th>Role</th><th>AWS API access</th></tr></thead>
+        <tbody>
+          <tr><td><code>pel-irsa-aws-lbc-dev</code></td><td>ELBv2, EC2 SG ops</td></tr>
+          <tr><td><code>pel-irsa-ebs-csi-dev</code></td><td>EBS volume lifecycle</td></tr>
+          <tr><td><code>pel-irsa-external-secrets-dev</code></td><td>Secrets Manager, SSM</td></tr>
+          <tr><td><code>pel-irsa-loki-dev</code></td><td>S3 (Loki chunks)</td></tr>
+          <tr><td><code>pel-irsa-cluster-autoscaler-dev</code></td><td>ASG describe/scale</td></tr>
+          <tr><td><code>pel-irsa-falcosidekick-dev</code></td><td>SNS / EventBridge</td></tr>
+          <tr><td><code>pel-irsa-arc-runners-dev</code></td><td>ECR push, S3 cache</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5. COMPONENTS -->
+    <section id="components">
+      <h2><span class="num">05</span>Component Catalog</h2>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-05-gitops/01-argocd-app-tree.png"
+             alt="ArgoCD app-of-apps tree"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">
+          ArgoCD · root-dev expanded, all Apps Healthy
+          <span class="file">screenshots/phase-1/sprint-05-gitops/01-argocd-app-tree.png</span>
+        </div>
+        <figcaption><strong>ArgoCD app-of-apps tree</strong> — one root Application reconciles ~20 children.</figcaption>
+      </figure>
+
+      <h3>ArgoCD — the GitOps brain</h3>
+      <p>App-of-apps pattern: <code>root-dev</code> references every other Application + ApplicationSet. ArgoCD self-manages — after the initial Helm bootstrap, the cluster reconciles ArgoCD onto itself. CRDs in sync wave -1, controllers in 0, workloads in +1 prevents controller-vs-CRD races. Insecure mode (<code>server.insecure: true</code>) lets ingress-nginx terminate TLS.</p>
+
+      <h3>ingress-nginx + AWS Load Balancer Controller</h3>
+      <p>L7 ingress via ingress-nginx behind NLB (<code>pel-nlb-dev</code>) provisioned by LBC from the controller&rsquo;s <code>Service type=LoadBalancer</code>. LBC&rsquo;s IRSA role needed explicit EC2 SG perms (CreateSecurityGroup, Authorize/RevokeSecurityGroupIngress) — discovered as a problem in session 2 (commit <code>623b00d</code>).</p>
+
+      <h3>cert-manager</h3>
+      <p>TLS for every Ingress (Let&rsquo;s Encrypt) and internal webhook certs (replaced kube-prometheus-stack&rsquo;s hand-rolled cert-init jobs in commit <code>e950329</code>). This introduced a circular dependency with kube-prometheus-stack — see Problems §6.6.</p>
+
+      <h3>kube-prometheus-stack</h3>
+      <p>Prometheus Operator bundle: Prometheus + Alertmanager + Grafana + node-exporter + kube-state-metrics + the <code>monitoring.coreos.com</code> CRDs. Grafana dashboards pre-provisioned from git. CPU request reduced to 100m (commit <code>d650cf9</code>) so it fits on a 2-node m6i.large dev cluster. Uses <code>gp3</code> EBS — and the SC does <strong>not</strong> auto-create, so post-bootstrap step always.</p>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-1/sprint-06-observability/01-grafana-cluster-overview.png"
+             alt="Grafana cluster overview"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">
+          Grafana · cluster-overview dashboard
+          <span class="file">screenshots/phase-1/sprint-06-observability/01-grafana-cluster-overview.png</span>
+        </div>
+        <figcaption><strong>Grafana</strong> — cluster-overview dashboard, CPU / memory / pod count.</figcaption>
+      </figure>
+
+      <h3>Loki + Tempo</h3>
+      <p>Cheap by design: index labels only, store chunks/traces in S3 (<code>pel-loki-<AWS_ACCOUNT_ID>-dev</code>). IRSA-scoped S3 access. Tempo joined in Phase 2; Phase 1 was metrics + logs only.</p>
+
+      <h3>OpenTelemetry Collector</h3>
+      <p>Receives OTLP/gRPC from apps; routes metrics → Prometheus remote-write, logs → Loki, traces → Tempo. Apps stay vendor-neutral.</p>
+
+      <h3>Kyverno</h3>
+      <p>Admission controller via CRDs (no Rego). Phase 1 baseline: pod-security-restricted, require-resource-limits, disallow-host-namespaces, disallow-privileged. Falco complements at runtime, not admission.</p>
+
+      <h3>OpenCost</h3>
+      <p>Joins AWS CUR + Kubernetes metadata for per-namespace daily spend. Probably the single most reviewer-impressive screenshot in the entire lab.</p>
+
+      <figure class="screenshot">
+        <img src="screenshots/phase-2/sprint-14-opencost/01-opencost-namespace-breakdown.png"
+             alt="OpenCost spend by namespace"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">
+          OpenCost · per-namespace daily spend
+          <span class="file">screenshots/phase-2/sprint-14-opencost/01-opencost-namespace-breakdown.png</span>
+        </div>
+        <figcaption><strong>OpenCost</strong> — per-namespace spend allocation, sortable by CPU / memory / total.</figcaption>
+      </figure>
+
+      <h3>Velero</h3>
+      <p>Cluster manifests + EBS snapshots → S3. Pre-install hook runs a CRD-upgrade Job; the kubectl init image had to be pinned to <code>bitnami/kubectl:1.32</code> because the chart&rsquo;s default was floating (commit <code>1903081</code>).</p>
+
+      <h3>External Secrets Operator</h3>
+      <p>Replaces the &ldquo;Secrets in git&rdquo; anti-pattern. SecretStore per region; ExternalSecret CRs declare which Secrets Manager keys to mirror.</p>
+
+      <h3>GitHub Actions Runner Controller (ARC)</h3>
+      <p>ARC + arc-runner-set = ephemeral runners as pods, scaled by webhook from GitHub. ECR push via IRSA. Operationally lives in the platform layer because every team reuses it.</p>
+    </section>
+
+    <!-- 6. PROBLEMS -->
+    <section id="problems">
+      <h2><span class="num">06</span>Problems &amp; Solutions</h2>
+      <p>Real incidents from <code>_project-docs/sessions/</code>. Each is a story of root cause → fix → lesson.</p>
+
+      <div class="problem">
+        <h3>6.1 — Phase 0 state was on local disk</h3>
+        <div class="row"><strong>Symptom</strong><span>Phase 1&rsquo;s <code>data "terraform_remote_state" "phase0"</code> returned empty.</span></div>
+        <div class="row"><strong>Root cause</strong><span>No <code>backend "s3"</code> block in <code>phase-0-baseline/versions.tf</code>. Bootstrap created the S3 bucket but never used it.</span></div>
+        <div class="row"><strong>Fix</strong><span>Added <code>backend "s3"</code> blocks to both phases, ran <code>terraform init -migrate-state</code>.</span></div>
+        <div class="row"><strong>Lesson</strong><span>&ldquo;Bootstrap a state backend&rdquo; and &ldquo;use the state backend&rdquo; are two different operations.</span></div>
+      </div>
+
+      <div class="problem">
+        <h3>6.2 — EKS 1.31 in extended support (+$0.10/hr)</h3>
+        <div class="row"><strong>Symptom</strong><span><code>InvalidParameterException: kubernetes version "1.31" is only supported under extended support</code></span></div>
+        <div class="row"><strong>Root cause</strong><span>EKS auto-rolled 1.31 to extended support around 2025-11. The runbook hard-coded 1.31.</span></div>
+        <div class="row"><strong>Fix</strong><span>Bumped to 1.34 (standard support to Dec 2026). Bumped addon pins (vpc-cni, kube-proxy, coredns, pod-identity, ebs-csi).</span></div>
+        <div class="row"><strong>Lesson</strong><span>K8s minors cycle every ~3 months; extended support starts ~14 months after release. Check <code>aws eks describe-cluster-versions</code> before pinning.</span></div>
+      </div>
+
+      <div class="problem">
+        <h3>6.3 — GitHub OIDC provider already existed (shared account)</h3>
+        <div class="row"><strong>Symptom</strong><span><code>EntityAlreadyExists: Provider with url https://token.actions.githubusercontent.com already exists</code></span></div>
+        <div class="row"><strong>Root cause</strong><span>AWS allows <strong>one</strong> OIDC provider per URL per account. Another project in <code><AWS_ACCOUNT_ID></code> had already created it.</span></div>
+        <div class="row"><strong>Fix</strong><span>Refactored <code>modules/iam-github-oidc/main.tf</code> to <code>data "aws_iam_openid_connect_provider"</code> instead of <code>resource</code>. Consume, don&rsquo;t own.</span></div>
+        <div class="row"><strong>Lesson</strong><span>Shared accounts demand <code>data</code> lookups for any globally-unique AWS resource.</span></div>
+      </div>
+
+      <div class="problem">
+        <h3>6.4 — SG rule descriptions with invalid characters</h3>
+        <div class="row"><strong>Symptom</strong><span>Apply failed validating Security Group rules.</span></div>
+        <div class="row"><strong>Root cause</strong><span>AWS allows only <code>a-zA-Z0-9 . _ - : / ( ) # , @ [ ] + = &amp; ; { } ! $ *</code> and spaces. Tried <code>→</code> (rejected), <code>-&gt;</code> (rejected: <code>&gt;</code> banned), finally <code>to</code> (worked).</span></div>
+        <div class="row"><strong>Lesson</strong><span>Stick to plain ASCII in AWS validated free-text fields. Two patches wasted because the allowed set wasn&rsquo;t obvious.</span></div>
+      </div>
+
+      <div class="problem">
+        <h3>6.5 — EBS KMS key missing kms:CreateGrant</h3>
+        <div class="row"><strong>Symptom</strong><span><code>Client.InvalidKMSKey.InvalidState</code> → <code>NodeCreationFailure: Instances failed to join the kubernetes cluster</code>.</span></div>
+        <div class="row"><strong>Root cause</strong><span>EKS managed node groups launch via ASG. To attach a KMS-encrypted EBS volume, ASG&rsquo;s service-linked role needs <code>kms:CreateGrant</code> on the key. Policy only granted Decrypt/Encrypt; ASG retried 10× then gave up. Error pointed at &ldquo;key state&rdquo; not policy — misleading.</span></div>
+        <div class="row"><strong>Fix</strong><span>Added conditional statement: <code>kms:GrantIsForAWSResource = true</code> + <code>aws:PrincipalAccount = self</code>. Standard AWS pattern.</span></div>
+        <div class="row"><strong>Lesson</strong><span>When a KMS-encrypted resource fails opaquely, suspect <code>CreateGrant</code> first.</span></div>
+      </div>
+
+      <div class="problem">
+        <h3>6.6 — Helm pre-install hook bootstrap deadlock <span class="badge warn">most instructive</span></h3>
+        <div class="row"><strong>Symptom</strong><span>After app-of-apps sync: cert-manager / kube-prometheus-stack / tempo / ingress-nginx all stuck in Missing/Degraded.</span></div>
+        <div class="row"><strong>Root cause</strong><span><strong>Cross-component circular dependency.</strong> cert-manager wanted to create a <code>monitoring.coreos.com/ServiceMonitor</code> (CRD owned by kube-prometheus-stack which hadn&rsquo;t installed); kube-prometheus-stack wanted to create <code>cert-manager.io/Certificate</code> + <code>Issuer</code> (CRDs owned by cert-manager which hadn&rsquo;t installed); tempo had the same SM problem; argocd&rsquo;s Ingress was rejected by LBC because IngressClass <code>nginx</code> didn&rsquo;t exist — ingress-nginx hadn&rsquo;t installed.</span></div>
+        <div class="row"><strong>Fix</strong><span>Disabled ServiceMonitor in the three blocking charts (commit <code>0c36ca3</code>). cert-manager installed → cert-manager CRDs available → kube-prometheus-stack installed → CRDs for SM available → re-enable SM in follow-up sync.</span></div>
+        <div class="row"><strong>Lesson</strong><span>Helm charts that can produce CRs from other charts have implicit ordering. ArgoCD sync waves are the proper fix; toggling optional features off is the pragmatic fix.</span></div>
+      </div>
+
+      <div class="problem">
+        <h3>6.7 — Smaller fixes (session 2)</h3>
+        <table>
+          <thead><tr><th>Commit</th><th>Issue</th></tr></thead>
+          <tbody>
+            <tr><td><code>1cbcd63</code></td><td>Scale scripts referenced old NG names; corrected to <code>pel-ng-*-dev</code></td></tr>
+            <tr><td><code>aea3cee</code></td><td>ingress-nginx replicaCount too high for 2-node dev; pinned to 1</td></tr>
+            <tr><td><code>1903081</code></td><td>Velero pre-install kubectl image floated; pinned <code>bitnami/kubectl:1.32</code></td></tr>
+            <tr><td><code>9c9878d</code></td><td>Observability AppSet needed <code>Replace=true</code> for large Prometheus CRDs</td></tr>
+            <tr><td><code>c4d7018</code></td><td><code>Replace=true</code> re-bound bound PVCs on resync; removed</td></tr>
+            <tr><td><code>3c92a83</code></td><td>ARC required <code>controllerServiceAccount</code> set explicitly</td></tr>
+            <tr><td><code>d53b909</code></td><td>ArgoCD Service set to LoadBalancer in Helm values (was hand-patched)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="problem">
+        <h3>6.8 — The gp3 StorageClass gotcha</h3>
+        <div class="row"><strong>Symptom</strong><span>Prometheus + Grafana PVCs Pending forever.</span></div>
+        <div class="row"><strong>Root cause</strong><span>EBS CSI installs but doesn&rsquo;t create a default StorageClass. Default <code>gp2</code> is inherited; Phase 1 charts request <code>gp3</code>.</span></div>
+        <div class="row"><strong>Fix</strong><span>Apply a <code>gp3</code> SC manually post-bootstrap as a runbook step.</span></div>
+        <div class="row"><strong>Lesson</strong><span>Anything depending on a default-named SC must either document the manual step or ship its own SC in its chart values.</span></div>
+      </div>
+
+      <div class="problem">
+        <h3>6.9 — ArgoCD CLI vs port-forward fragility</h3>
+        <div class="row"><strong>Symptom</strong><span><code>argocd app sync</code> repeatedly failed: &ldquo;server address unspecified&rdquo; or hung on gRPC handshake.</span></div>
+        <div class="row"><strong>Root cause</strong><span>CLI login state is per-shell. Port-forward + login must happen in the same terminal; pf needs <code>--address 0.0.0.0</code> for cross-terminal use.</span></div>
+        <div class="row"><strong>Workaround</strong><span>Skip the CLI; patch Application CRs directly: <code>kubectl -n argocd patch application &lt;name&gt; --type merge -p '{"operation":{"sync":{"prune":true,"syncStrategy":{"apply":{"force":true}}}}}'</code></span></div>
+        <div class="row"><strong>Lesson</strong><span>When the CLI fights you, remember it&rsquo;s a thin wrapper over the K8s API. <code>kubectl</code> always works.</span></div>
+      </div>
+    </section>
+
+    <!-- 7. OPS -->
+    <section id="ops">
+      <h2><span class="num">07</span>Operational Workflow</h2>
+
+      <h3>Fresh build (from zero)</h3>
+      <ol>
+        <li><code>terraform apply</code> Phase 0 baseline (~5 min)</li>
+        <li><code>terraform apply</code> Phase 1 MVP (~30 min) — VPC, EKS, IRSA</li>
+        <li><code>aws eks update-kubeconfig</code>; verify 2 nodes Ready</li>
+        <li>Apply <code>gp3</code> StorageClass manually</li>
+        <li><code>make argocd-bootstrap ENV=dev</code></li>
+        <li>Re-apply GitHub PAT secret for ArgoCD repo access</li>
+        <li><code>make argocd-sync ENV=dev</code></li>
+        <li>Wait 5–15 min for all child Apps to reach Healthy</li>
+      </ol>
+
+      <h3>Teardown (cost discipline)</h3>
+      <p>Per Directive 02, the cluster is destroyed at end of each sprint loop:</p>
+      <ul>
+        <li><code>terraform destroy</code> Phase 1 (~10 min)</li>
+        <li>Manually delete orphan ELBs / NLBs / EBS volumes (Helm-created LBs persist if Service objects aren&rsquo;t deleted first)</li>
+        <li>Phase 0 stays up (~$5/month for KMS + S3 + ECR + CUR delivery)</li>
+      </ul>
+
+      <h3>Cost reality</h3>
+      <table>
+        <thead><tr><th>State</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Idle Phase 0 baseline</td><td>~$5 / month</td></tr>
+          <tr><td>Active dev cluster</td><td>~$3–4 per 12-hour day</td></tr>
+          <tr><td>Per-loop budget (Directive 02)</td><td>$5–25 AWS, $0–5 LLM, 2–6h wall-clock</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 8. STATUS -->
+    <section id="status">
+      <h2><span class="num">08</span>Status Snapshot</h2>
+      <p><strong>2026-05-15</strong>, end of session 3.</p>
+
+      <table>
+        <thead><tr><th>Domain</th><th>State</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Phase 0 baseline</td><td><span class="badge healthy">Applied + stable</span></td><td>S3, KMS aliases × 4, ECR × 5</td></tr>
+          <tr><td>Phase 1 MVP</td><td><span class="badge healthy">Applied</span></td><td>100 TF resources, EKS v1.34, 2 × m6i.large</td></tr>
+          <tr><td>ArgoCD</td><td><span class="badge healthy">Installed</span></td><td>App-of-apps wired up</td></tr>
+        </tbody>
+      </table>
+
+      <h3>App-of-apps sync state</h3>
+      <table>
+        <thead><tr><th>State</th><th>Apps</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge healthy">Synced + Healthy</span></td><td>argocd core, cert-manager, kube-prometheus-stack, tempo, opencost, external-dns, external-secrets, LBC, chaos-mesh, goldilocks, arc, arc-runner-set</td></tr>
+          <tr><td><span class="badge info">Healthy / OutOfSync (cosmetic)</span></td><td>metrics-server, kyverno</td></tr>
+          <tr><td><span class="badge warn">Progressing</span></td><td>falco</td></tr>
+          <tr><td><span class="badge warn">Unknown (controller pending)</span></td><td>loki, otel-collector, pyrra</td></tr>
+          <tr><td><span class="badge broken">Stuck</span></td><td>ingress-nginx (hook deadlock under investigation), velero (hook stuck), argocd app (Degraded — needs ingress-nginx first)</td></tr>
+        </tbody>
+      </table>
+
+      <p>Portfolio screenshots capture deferred until ingress-nginx + argocd are Healthy.</p>
+    </section>
+
+    <!-- 9. GALLERY -->
+    <section id="gallery">
+      <h2><span class="num">09</span>Phase 1 Capture Gallery</h2>
+      <p>One placeholder per screenshot called out in the sprint READMEs. Click a sprint header to expand. Drop a PNG at the path shown and reload &mdash; the slot auto-replaces its placeholder with the real image.</p>
+
+      <p class="phase-header">Phase 1 — MVP</p>
+
+      <details class="sprint" open>
+        <summary><span class="title">Sprint 01 &nbsp;&middot;&nbsp; Repo Bootstrap + Tooling</span><span class="meta">4 slots</span></summary>
+        <div class="gallery-grid">
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-01-bootstrap/02-make-bootstrap-pass.png" alt="make bootstrap"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · make bootstrap
+              <span class="file">sprint-01-bootstrap/02-make-bootstrap-pass.png</span></div>
+            <figcaption><code>make bootstrap</code> exit 0 with toolchain versions listed.</figcaption>
+          </figure>
+          </div>
+      </details>
+
+      <details class="sprint">
+        <summary><span class="title">Sprint 02 &nbsp;&middot;&nbsp; Terraform Foundation</span><span class="meta">6 slots</span></summary>
+        <div class="gallery-grid">
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-02-terraform/01-vpc-console.png" alt="VPC console"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">AWS · VPC list
+              <span class="file">sprint-02-terraform/01-vpc-console.png</span></div>
+            <figcaption><code>pel-vpc-dev</code> with 3 AZs, 6 subnets.</figcaption>
+          </figure>
+          </div>
+      </details>
+
+      <details class="sprint">
+        <summary><span class="title">Sprint 03 &nbsp;&middot;&nbsp; EKS Cluster + Node Groups</span><span class="meta">5 slots</span></summary>
+        <div class="gallery-grid">
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-03-eks/01-eks-console.png" alt="EKS console"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">AWS · EKS cluster
+              <span class="file">sprint-03-eks/01-eks-console.png</span></div>
+            <figcaption><code>pel-eks-dev</code> ACTIVE, k8s 1.34.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-03-eks/02-node-groups.png" alt="Node groups"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">AWS · EKS compute
+              <span class="file">sprint-03-eks/02-node-groups.png</span></div>
+            <figcaption>Managed node groups listed.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-03-eks/03-kubectl-get-nodes.png" alt="kubectl get nodes"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · kubectl get nodes
+              <span class="file">sprint-03-eks/03-kubectl-get-nodes.png</span></div>
+            <figcaption>2 Ready nodes spread across AZs.</figcaption>
+          </figure>
+          </div>
+      </details>
+
+      <details class="sprint">
+        <summary><span class="title">Sprint 04 &nbsp;&middot;&nbsp; Cluster Bootstrap</span><span class="meta">5 slots</span></summary>
+        <div class="gallery-grid">
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/01-kubectl-pods-platform.png" alt="pods platform-system"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · pods in platform-system
+              <span class="file">sprint-04-cluster-bootstrap/01-kubectl-pods-platform.png</span></div>
+            <figcaption>ingress-nginx, external-dns, ESO Running.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/02-cert-manager-pods.png" alt="cert-manager pods"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · cert-manager pods
+              <span class="file">sprint-04-cluster-bootstrap/02-cert-manager-pods.png</span></div>
+            <figcaption>3 cert-manager pods Running.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/03-external-secrets-synced.png" alt="ExternalSecret READY"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · externalsecret -A
+              <span class="file">sprint-04-cluster-bootstrap/03-external-secrets-synced.png</span></div>
+            <figcaption>ExternalSecrets READY=True.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-04-cluster-bootstrap/04-ingress-class.png" alt="IngressClass nginx"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · kubectl get ingressclass
+              <span class="file">sprint-04-cluster-bootstrap/04-ingress-class.png</span></div>
+            <figcaption><code>nginx</code> IngressClass set default.</figcaption>
+          </figure>
+          </div>
+      </details>
+
+      <details class="sprint">
+        <summary><span class="title">Sprint 05 &nbsp;&middot;&nbsp; GitOps with ArgoCD</span><span class="meta">5 slots</span></summary>
+        <div class="gallery-grid">
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-05-gitops/01-argocd-app-tree.png" alt="ArgoCD root-dev tree"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">ArgoCD · root-dev expanded
+              <span class="file">sprint-05-gitops/01-argocd-app-tree.png</span></div>
+            <figcaption><code>root-dev</code> tree, all AppSets + children.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-05-gitops/02-argocd-all-healthy.png" alt="All apps green"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">ArgoCD · all apps Synced
+              <span class="file">sprint-05-gitops/02-argocd-all-healthy.png</span></div>
+            <figcaption>All Applications Synced + Healthy.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-05-gitops/03-argocd-sync-waves.png" alt="Sync waves"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">ArgoCD · AppSet sync waves
+              <span class="file">sprint-05-gitops/03-argocd-sync-waves.png</span></div>
+            <figcaption>platform-addons AppSet with wave annotations.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-05-gitops/04-argocd-self-heal.png" alt="self-heal"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · ArgoCD self-heal demo
+              <span class="file">sprint-05-gitops/04-argocd-self-heal.png</span></div>
+            <figcaption>Deployment deleted → ArgoCD recreated it.</figcaption>
+          </figure>
+          </div>
+      </details>
+
+      <details class="sprint">
+        <summary><span class="title">Sprint 06 &nbsp;&middot;&nbsp; Observability Baseline</span><span class="meta">6 slots</span></summary>
+        <div class="gallery-grid">
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-06-observability/01-grafana-cluster-overview.png" alt="Grafana cluster"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Grafana · cluster overview
+              <span class="file">sprint-06-observability/01-grafana-cluster-overview.png</span></div>
+            <figcaption>K8s Cluster dashboard, CPU/mem per namespace.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-06-observability/02-grafana-node-overview.png" alt="Grafana node"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Grafana · USE Method Node
+              <span class="file">sprint-06-observability/02-grafana-node-overview.png</span></div>
+            <figcaption>Per-node CPU / mem / network.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-06-observability/04-prometheus-targets.png" alt="Prom targets"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Prometheus · /targets
+              <span class="file">sprint-06-observability/04-prometheus-targets.png</span></div>
+            <figcaption>All targets UP, 0 down.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-06-observability/05-alertmanager-ui.png" alt="Alertmanager"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Alertmanager UI
+              <span class="file">sprint-06-observability/05-alertmanager-ui.png</span></div>
+            <figcaption>Route tree, no active firing alerts.</figcaption>
+          </figure>
+          </div>
+      </details>
+
+      <details class="sprint">
+        <summary><span class="title">Sprint 07 &nbsp;&middot;&nbsp; Security Baseline</span><span class="meta">6 slots</span></summary>
+        <div class="gallery-grid">
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-07-security/01-kyverno-deny-privileged.png" alt="Kyverno deny privileged"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · kyverno deny privileged pod
+              <span class="file">sprint-07-security/01-kyverno-deny-privileged.png</span></div>
+            <figcaption>Privileged pod denied by Kyverno admission.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-07-security/02-kyverno-deny-no-limits.png" alt="Kyverno deny no-limits"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · kyverno deny no limits
+              <span class="file">sprint-07-security/02-kyverno-deny-no-limits.png</span></div>
+            <figcaption>Pod missing resource limits denied.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-07-security/03-kyverno-policy-list.png" alt="Kyverno policies"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · clusterpolicy list
+              <span class="file">sprint-07-security/03-kyverno-policy-list.png</span></div>
+            <figcaption>All ClusterPolicies READY=True.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-07-security/04-kyverno-policy-report.png" alt="PolicyReport"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · policyreport -A
+              <span class="file">sprint-07-security/04-kyverno-policy-report.png</span></div>
+            <figcaption>Audit results per namespace.</figcaption>
+          </figure>
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-07-security/05-trivy-operator-report.png" alt="Trivy vuln"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">Terminal · vulnerabilityreport -A
+              <span class="file">sprint-07-security/05-trivy-operator-report.png</span></div>
+            <figcaption>CVE scan results for running images.</figcaption>
+          </figure>
+          </div>
+      </details>
+
+      <details class="sprint">
+        <summary><span class="title">Sprint 08 &nbsp;&middot;&nbsp; CI/CD Reusable Workflows</span><span class="meta">5 slots</span></summary>
+        <div class="gallery-grid">
+          </div>
+      </details>
+
+      <details class="sprint">
+        <summary><span class="title">Sprint 09 &nbsp;&middot;&nbsp; Microservice Demo End-to-End</span><span class="meta">5 slots</span></summary>
+        <div class="gallery-grid">
+          <figure class="screenshot">
+            <img src="screenshots/phase-1/sprint-09-demo-app/02-argocd-demo-app-synced.png" alt="ArgoCD demo app"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <div class="placeholder" style="display:none;">ArgoCD · example-app Healthy
+              <span class="file">sprint-09-demo-app/02-argocd-demo-app-synced.png</span></div>
+            <figcaption>example-app Synced + Healthy with image tag.</figcaption>
+          </figure>
+          </div>
+      </details>
+
+    </section>
+
+    <footer>
+      <p>platform-engineering-lab · maintained by Inferloop Team · documentation generated 2026-05-15</p>
+      <p>Source-of-truth: <code>_project-docs/portfolio/eks-and-platform-deep-dive.md</code></p>
+    </footer>
+
+  </main>
+
+</div>
+
+</body>
+</html>
