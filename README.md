@@ -2,7 +2,7 @@
 
 [![Live Site](https://img.shields.io/badge/Live%20Site-dmiruke.dev-6aa7ff?style=for-the-badge&logo=github)](https://dmiruke-ai.github.io/dmiruke.github.io/)
 [![Platform Engineering Lab](https://img.shields.io/badge/Platform%20Engineering%20Lab-EKS%20%7C%20ArgoCD%20%7C%20Terraform-5fc77a?style=for-the-badge)](https://dmiruke-ai.github.io/dmiruke.github.io/platform-engineering-lab/)
-[![AEGIS Certify](https://img.shields.io/badge/AEGIS%20Certify-AI%20Governance%20%7C%20115%20PCUs-b48cff?style=for-the-badge)](https://dmiruke-ai.github.io/dmiruke.github.io/platform-engineering-lab/aegis.html)
+[![AEGIS Certify](https://img.shields.io/badge/AEGIS%20Certify-AI%20Governance%20%7C%20115%20PCUs-b48cff?style=for-the-badge)](https://github.com/dmiruke-ai/aegis-certify-public)
 
 **Dattaram Miruke** — Principal AI Platform Architect · DevOps · Kubernetes · AWS · Distributed Systems
 
