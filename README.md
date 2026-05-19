@@ -110,6 +110,22 @@
 
 ---
 
+### AgenticDevops — AI DevOps Agent Platform
+
+[![AgenticDevops](https://img.shields.io/badge/AgenticDevops-AI%20DevOps%20%7C%20LangGraph%20%7C%20OPA-f0b95c?style=for-the-badge)](https://github.com/dmiruke-ai/agenticdevops-public)
+
+> AI-powered multi-agent platform that converts natural language into production-ready Terraform, CI/CD pipelines, and IAM policies — with deterministic OPA safety gates, confidence-tracked intent, Tree-of-Thought FinOps scoring, and human-in-the-loop approval.
+
+| | |
+|---|---|
+| **Stack** | LangGraph · FastAPI · Terraform · OPA (Rego) · OpenTelemetry · Prometheus · Grafana · Jaeger · Redis |
+| **Patterns** | 4-band confidence intent · OPA intent gate (injection + IAM + SG) · 15-type error classifier · Tree-of-Thought FinOps · blast-radius HITL approval |
+| **Tests** | 426 passing · 5 sprints complete |
+| **Showcase repo** | [github.com/dmiruke-ai/agenticdevops-public](https://github.com/dmiruke-ai/agenticdevops-public) |
+| **Source** | [github.com/dmiruke-ai/AgenticDevops](https://github.com/dmiruke-ai/AgenticDevops) |
+
+---
+
 ## Contact
 
 **Dattaram Miruke**
