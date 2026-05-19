@@ -1,7 +1,9 @@
 # dmiruke.dev — Portfolio
 
 [![Platform Engineering Lab](https://img.shields.io/badge/Platform%20Engineering%20Lab-EKS%20%7C%20ArgoCD%20%7C%20Terraform-5fc77a?style=for-the-badge)]
+
 [![AEGIS Certify](https://img.shields.io/badge/AEGIS%20Certify-AI%20Governance-b48cff?style=for-the-badge)](https://github.com/dmiruke-ai/aegis-certify-public)
+
 [![Mnemos](https://img.shields.io/badge/Mnemos-Agentic%20Memory%20%7C%205--layer%20Code%20Graph-0ea5e9?style=for-the-badge)](https://github.com/dmiruke-ai/mnemos-public)
 
 **Dattaram Miruke** — Principal AI Platform Architect · DevOps · Kubernetes · AWS · Distributed Systems
