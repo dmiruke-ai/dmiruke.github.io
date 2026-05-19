@@ -218,7 +218,52 @@ User → API Gateway → LLM Control Plane → Agent Orchestrator → Tool Execu
 
 ## Skills
 
-`AI Platforms` `Kubernetes` `AWS` `Terraform` `LLM Control Planes` `Multi-Agent Systems` `RAG Pipelines` `LangChain` `LangGraph` `EKS` `GitHub Actions` `Python` `FastAPI` `Observability` `OpenTelemetry` `Grafana` `Lambda` `Bedrock` `Step Functions` `SNS/SQS` `AWS CDK` `GitOps` `OPA` `RBAC` `Zero Trust` `AI Guardrails` `CloudFront` `Semantic Search` `Policy-as-Code` `Distributed Systems` `Chaos Engineering` `Kafka` `DeepEval` `RAGAS` `pgvector` `Redis` `FastAPI` `PostgreSQL`
+<!-- Tier 1 — Core identity (largest) -->
+![AI Platforms](https://img.shields.io/badge/AI%20Platforms-b48cff?style=for-the-badge)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-4ade80?style=for-the-badge)
+![AWS](https://img.shields.io/badge/AWS-38bdf8?style=for-the-badge)
+![LLM Control Planes](https://img.shields.io/badge/LLM%20Control%20Planes-b48cff?style=for-the-badge)
+
+<!-- Tier 2 — Major expertise -->
+![Terraform](https://img.shields.io/badge/Terraform-4ade80?style=for-the-badge)
+![Multi-Agent Systems](https://img.shields.io/badge/Multi--Agent%20Systems-b48cff?style=for-the-badge)
+![RAG Pipelines](https://img.shields.io/badge/RAG%20Pipelines-b48cff?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-fb923c?style=for-the-badge)
+![EKS](https://img.shields.io/badge/EKS-38bdf8?style=for-the-badge)
+
+<!-- Tier 3 — Strong capabilities (flat) -->
+![LangChain](https://img.shields.io/badge/LangChain-b48cff?style=flat&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-b48cff?style=flat&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-fb923c?style=flat&logoColor=white)
+![Observability](https://img.shields.io/badge/Observability-fbbf24?style=flat&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-4ade80?style=flat&logoColor=white)
+![GitOps](https://img.shields.io/badge/GitOps-4ade80?style=flat&logoColor=white)
+![pgvector](https://img.shields.io/badge/pgvector-22d3ee?style=flat&logoColor=white)
+
+<!-- Tier 4 — Solid skills (flat-square) -->
+![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-fbbf24?style=flat-square)
+![Grafana](https://img.shields.io/badge/Grafana-fbbf24?style=flat-square)
+![Lambda](https://img.shields.io/badge/Lambda-38bdf8?style=flat-square)
+![Bedrock](https://img.shields.io/badge/Bedrock-38bdf8?style=flat-square)
+![AWS CDK](https://img.shields.io/badge/AWS%20CDK-38bdf8?style=flat-square)
+![OPA](https://img.shields.io/badge/OPA-fb7185?style=flat-square)
+![RBAC](https://img.shields.io/badge/RBAC-fb7185?style=flat-square)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-22d3ee?style=flat-square)
+![Redis](https://img.shields.io/badge/Redis-22d3ee?style=flat-square)
+![Kafka](https://img.shields.io/badge/Kafka-22d3ee?style=flat-square)
+
+<!-- Tier 5 — Supporting tech (flat-square, smaller palette) -->
+![Step Functions](https://img.shields.io/badge/Step%20Functions-38bdf8?style=flat-square)
+![SNS/SQS](https://img.shields.io/badge/SNS%2FSQS-38bdf8?style=flat-square)
+![CloudFront](https://img.shields.io/badge/CloudFront-38bdf8?style=flat-square)
+![Zero Trust](https://img.shields.io/badge/Zero%20Trust-fb7185?style=flat-square)
+![AI Guardrails](https://img.shields.io/badge/AI%20Guardrails-fb7185?style=flat-square)
+![Semantic Search](https://img.shields.io/badge/Semantic%20Search-b48cff?style=flat-square)
+![DeepEval](https://img.shields.io/badge/DeepEval-b48cff?style=flat-square)
+![RAGAS](https://img.shields.io/badge/RAGAS-b48cff?style=flat-square)
+![Distributed Systems](https://img.shields.io/badge/Distributed%20Systems-4ade80?style=flat-square)
+![Policy-as-Code](https://img.shields.io/badge/Policy--as--Code-fb7185?style=flat-square)
+![Chaos Engineering](https://img.shields.io/badge/Chaos%20Engineering-4ade80?style=flat-square)
 
 ---
 
