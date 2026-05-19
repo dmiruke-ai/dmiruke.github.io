@@ -80,20 +80,6 @@ I specialize in turning **ambiguous problems into structured, scalable systems**
 
 ---
 
-### RAG Platform — Document Intelligence System
-
-> End-to-end ingestion → embedding → retrieval → evaluation pipeline for production RAG workloads.
-
-| | |
-|---|---|
-| **Ingestion** | Multi-channel: docs, APIs, streams |
-| **Search** | Semantic search pipelines (vector + metadata hybrid) |
-| **Prompting** | PromptBuilder for structured, reproducible prompt generation |
-| **Memory** | Persistent AI memory via Mnemos integration |
-| **Status** | Repo link coming soon |
-
----
-
 ### Mnemos — Persistent Agentic Memory with Provenance
 
 [![Live API](https://img.shields.io/badge/Live%20API-Swagger%20UI-b48cff?style=flat-square)](http://37.27.97.75:8200/docs)
