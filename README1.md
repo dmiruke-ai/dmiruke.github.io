@@ -1,6 +1,6 @@
 # dmiruke.dev — Portfolio
 
-[![Platform Engineering Lab](https://img.shields.io/badge/Platform%20Engineering%20Lab-EKS%20%7C%20ArgoCD%20%7C%20Terraform-5fc77a?style=for-the-badge)](https://dmiruke-ai.github.io/platform-engineering-lab-public/)
+[![Platform Engineering Lab](https://img.shields.io/badge/Platform%20Engineering%20Lab-EKS%20%7C%20ArgoCD%20%7C%20Terraform-5fc77a?style=for-the-badge)]
 [![AEGIS Certify](https://img.shields.io/badge/AEGIS%20Certify-AI%20Governance-b48cff?style=for-the-badge)](https://github.com/dmiruke-ai/aegis-certify-public)
 [![Mnemos](https://img.shields.io/badge/Mnemos-Agentic%20Memory%20%7C%205--layer%20Code%20Graph-0ea5e9?style=for-the-badge)](https://github.com/dmiruke-ai/mnemos-public)
 
@@ -25,7 +25,12 @@ I specialize in turning **ambiguous problems into structured, scalable systems**
 
 ## Flagship Projects
 
-### Platform Engineering Lab
+[![Flagship Projects](https://img.shields.io/badge/Flagship%20Projects-Production%20AI%20%26%20Platform%20Systems-f59e0b?style=for-the-badge)](#flagship-projects)
+
+### Platform Engineering Lab — Production EKS Reference Architecture
+
+[![Platform Engineering Lab](https://img.shields.io/badge/Platform%20Engineering%20Lab-EKS%20%7C%20ArgoCD%20%7C%20Terraform-5fc77a?style=for-the-badge)](https://dmiruke-ai.github.io/platform-engineering-lab-public/)
+
 > Production-grade internal Platform Engineering reference architecture on AWS EKS.
 
 | | |
@@ -316,5 +321,3 @@ User → API Gateway → LLM Control Plane → Agent Orchestrator → Tool Execu
 
 **Dattaram Miruke**
 [dmiruke@gmail.com](mailto:dmiruke@gmail.com) · [github.com/dmiruke-ai](https://github.com/dmiruke-ai)
-
-> Custom domain `dmiruke.dev` pending DNS propagation.
