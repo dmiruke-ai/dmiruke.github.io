@@ -48,7 +48,6 @@ Role-tailored views available via `?role=` parameter:
 | **Coverage** | 115 PCUs · 12 frameworks: GDPR, EU AI Act, NIST AI RMF, SOC 2, HIPAA, PCI-DSS, Agentic R1–R7 |
 | **Interfaces** | REST API · gRPC · Python SDK · CLI · OPA/Kyverno bundle export |
 | **Research** | H1–H7 hypotheses · 866 test cases · 0% false positive rate (H5) |
-| **Deep dive** | [platform-engineering-lab/aegis.html](https://dmiruke-ai.github.io/dmiruke.github.io/platform-engineering-lab/aegis.html) |
 | **Source** | [github.com/dmiruke-ai/aegis-certify-public](https://github.com/dmiruke-ai/aegis-certify-public) |
 
 ---
