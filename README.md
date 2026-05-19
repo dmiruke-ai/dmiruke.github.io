@@ -1,7 +1,6 @@
 # dmiruke.dev — Portfolio
 
 [![Platform Engineering Lab](https://img.shields.io/badge/Platform%20Engineering%20Lab-EKS%20%7C%20ArgoCD%20%7C%20Terraform-5fc77a?style=for-the-badge)](https://dmiruke-ai.github.io/platform-engineering-lab-public/)
-[![AEGIS Certify](https://img.shields.io/badge/AEGIS%20Certify-AI%20Governance%20%7C%20115%20PCUs-b48cff?style=for-the-badge)](https://github.com/dmiruke-ai/aegis-certify-public)
 
 **Dattaram Miruke** — Principal AI Platform Architect · DevOps · Kubernetes · AWS · Distributed Systems
 
@@ -24,6 +23,9 @@
 ---
 
 ### AEGIS Certify — AI Trust & Evaluation Framework
+
+[![AEGIS Certify](https://img.shields.io/badge/AEGIS%20Certify-AI%20Governance%20%7C%20115%20PCUs-b48cff?style=for-the-badge)](https://github.com/dmiruke-ai/aegis-certify-public)
+
 > Deterministic AI compliance assurance — governance, evaluation, and safety layer for agentic AI systems.
 
 | | |
