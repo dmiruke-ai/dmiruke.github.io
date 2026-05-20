@@ -38,6 +38,8 @@
 | **Research** | H1–H7 hypotheses · 866 test cases · 0% false positive rate (H5) |
 | **Source** | [github.com/dmiruke-ai/aegis-certify-public](https://github.com/dmiruke-ai/aegis-certify-public) |
 
+> **Patent Pending.**
+
 ---
 
 ### Mnemos — Persistent Agentic Memory with Provenance
