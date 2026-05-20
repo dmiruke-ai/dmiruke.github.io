@@ -129,6 +129,26 @@
 
 ---
 
+### VisDoc — PDF → Semantic Knowledge Graph
+
+[![VisDoc](https://img.shields.io/badge/VisDoc-PDF%20%E2%86%92%20Semantic%20Graph-0ea5e9?style=for-the-badge)](https://github.com/dmiruke-ai/visdoc-public)
+[![Live UI](https://img.shields.io/badge/Live%20UI-CloudFront-b48cff?style=flat-square)](https://d1gub3laivgf4x.cloudfront.net)
+[![API Docs](https://img.shields.io/badge/API%20Docs-Swagger%20UI-5fc77a?style=flat-square)](https://d1gub3laivgf4x.cloudfront.net/api/docs)
+
+> Document intelligence platform that turns unstructured PDFs into semantically navigable knowledge graphs — hybrid Python/Rust core, AWS-serverless deployment.
+
+| | |
+|---|---|
+| **Stack** | Python · Rust (PDF parsing, 10× perf) · Flask + Mangum · TypeScript / React · AWS Lambda · S3 · DynamoDB · Bedrock |
+| **Pipeline** | Ingest → Parse → OCR (Tesseract / PaddleOCR / GCV) → Tables (Camelot) → Forms → Charts → NLP → Semantic Graph |
+| **Graph** | 7 node types · 6 edge types · 4–5 level hierarchy (Document → Section → Subsection → Paragraph) |
+| **Deployment** | CloudFront · API Gateway · Lambda · SQS · DynamoDB · S3 · Bedrock (Nova Micro / Lite) — ~$10/mo at 1K docs/mo |
+| **Live UI** | [d1gub3laivgf4x.cloudfront.net](https://d1gub3laivgf4x.cloudfront.net) |
+| **API Docs** | [d1gub3laivgf4x.cloudfront.net/api/docs](https://d1gub3laivgf4x.cloudfront.net/api/docs) |
+| **Showcase repo** | [github.com/dmiruke-ai/visdoc-public](https://github.com/dmiruke-ai/visdoc-public) |
+
+---
+
 ## Contact
 
 **Dattaram Miruke**
