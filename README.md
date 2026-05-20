@@ -113,6 +113,9 @@
 ### AgenticDevops — AI DevOps Agent Platform
 
 [![AgenticDevops](https://img.shields.io/badge/AgenticDevops-AI%20DevOps%20%7C%20LangGraph%20%7C%20OPA-f0b95c?style=for-the-badge)](https://github.com/dmiruke-ai/agenticdevops-public)
+[![Live API](https://img.shields.io/badge/Live%20API-Swagger%20UI-b48cff?style=flat-square)](http://37.27.97.75:8000/docs)
+[![Grafana](https://img.shields.io/badge/Observability-Grafana-f59e0b?style=flat-square)](http://37.27.97.75:3010/)
+[![Jaeger](https://img.shields.io/badge/Tracing-Jaeger-e08a2b?style=flat-square)](http://37.27.97.75:16686/)
 
 > AI-powered multi-agent platform that converts natural language into production-ready Terraform, CI/CD pipelines, and IAM policies — with deterministic OPA safety gates, confidence-tracked intent, Tree-of-Thought FinOps scoring, and human-in-the-loop approval.
 
@@ -121,6 +124,9 @@
 | **Stack** | LangGraph · FastAPI · Terraform · OPA (Rego) · OpenTelemetry · Prometheus · Grafana · Jaeger · Redis |
 | **Patterns** | 4-band confidence intent · OPA intent gate (injection + IAM + SG) · 15-type error classifier · Tree-of-Thought FinOps · blast-radius HITL approval |
 | **Tests** | 426 passing · 5 sprints complete |
+| **API (Swagger UI)** | [http://37.27.97.75:8000/docs](http://37.27.97.75:8000/docs) |
+| **Grafana** | [http://37.27.97.75:3010/](http://37.27.97.75:3010/) — anon viewer · admin `admin/devops123` |
+| **Jaeger** | [http://37.27.97.75:16686/](http://37.27.97.75:16686/) — distributed traces |
 | **Showcase repo** | [github.com/dmiruke-ai/agenticdevops-public](https://github.com/dmiruke-ai/agenticdevops-public) |
 | **Source** | [github.com/dmiruke-ai/AgenticDevops](https://github.com/dmiruke-ai/AgenticDevops) |
 
@@ -130,5 +136,3 @@
 
 **Dattaram Miruke**
 [dmiruke@gmail.com](mailto:dmiruke@gmail.com) · [github.com/dmiruke-ai](https://github.com/dmiruke-ai)
-
-> Custom domain `dmiruke.dev` pending DNS propagation.
