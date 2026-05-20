@@ -106,8 +106,6 @@
 | **MCP tools** | [`docs/MCP_TOOLS.md`](https://github.com/dmiruke-ai/mnemos-public/blob/main/docs/MCP_TOOLS.md) — 27 tools + Claude Desktop / Cursor config |
 | **Monitoring** | [`docs/MONITORING.md`](https://github.com/dmiruke-ai/mnemos-public/blob/main/docs/MONITORING.md) — what's instrumented, overhead measurements |
 
-> **Patent pending.** The hosted demo is free for evaluation; commercial use, derivative work, and embedded integration require written permission.
-
 ---
 
 ### AgenticDevops — AI DevOps Agent Platform
