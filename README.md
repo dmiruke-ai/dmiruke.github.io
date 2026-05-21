@@ -44,9 +44,7 @@
 
 ### Mnemos — Persistent Agentic Memory with Provenance
 
-[![Live API](https://img.shields.io/badge/Live%20API-Swagger%20UI-b48cff?style=flat-square)](http://37.27.97.75:8200/docs)
-[![Dashboard](https://img.shields.io/badge/Dashboard-Mnemos%20UI-5fc77a?style=flat-square)](http://37.27.97.75:3002/)
-[![Grafana](https://img.shields.io/badge/Observability-Grafana-f59e0b?style=flat-square)](http://37.27.97.75:10210/d/mnemos-overview/)
+[![Grafana](https://img.shields.io/badge/Observability-Grafana-f59e0b?style=flat-square)](https://mnemos-grafana.dmiruke.dev/d/mnemos-overview/)
 [![Public Repo](https://img.shields.io/badge/Repo-mnemos--public-0ea5e9?style=flat-square)](https://github.com/dmiruke-ai/mnemos-public)
 
 > AI-accessible memory system that treats every fact as a **positioned, typed, graph-aware** unit — not an opaque embedded chunk. Documents keep their **page tree** so retrieval results carry `Doc > §3 > p.5` breadcrumbs. Codebases are ingested as a **5-layer semantic graph** (structural / AST / runtime-ops / semantic / relationship), not flat RAG.
@@ -66,10 +64,7 @@
 
 | | |
 |---|---|
-| **Dashboard** | [http://37.27.97.75:3002/](http://37.27.97.75:3002/) — `/memories` · `/search` · `/graph` · `/codebases` · `/admin` |
-| **REST API (Swagger)** | [http://37.27.97.75:8200/docs](http://37.27.97.75:8200/docs) — 64 endpoints, interactive try-it-out |
-| **Prometheus** | [http://37.27.97.75:9091/](http://37.27.97.75:9091/) — 36 custom series, 15-day retention |
-| **Grafana** | [http://37.27.97.75:10210/d/mnemos-overview/](http://37.27.97.75:10210/d/mnemos-overview/) — 13-panel dashboard (anon viewer, admin `admin/mnemos`) |
+| **Grafana** | [mnemos-grafana.dmiruke.dev/d/mnemos-overview/](https://mnemos-grafana.dmiruke.dev/d/mnemos-overview/) — 13-panel dashboard (anon viewer) |
 | **MCP server** | 27 typed tools — `find_symbol`, `who_calls`, `get_symbol_callgraph`, `semantic_search` w/ breadcrumb, `get_infra_resources`, … |
 
 #### Architecture at a glance
@@ -113,8 +108,7 @@
 ### AgenticDevops — AI DevOps Agent Platform
 
 [![AgenticDevops](https://img.shields.io/badge/AgenticDevops-AI%20DevOps%20%7C%20LangGraph%20%7C%20OPA-f0b95c?style=for-the-badge)](https://github.com/dmiruke-ai/agenticdevops-public)
-[![Live API](https://img.shields.io/badge/Live%20API-Swagger%20UI-b48cff?style=flat-square)](http://37.27.97.75:8000/docs)
-[![Grafana](https://img.shields.io/badge/Observability-Grafana-f59e0b?style=flat-square)](http://37.27.97.75:3010/)
+[![Grafana](https://img.shields.io/badge/Observability-Grafana-f59e0b?style=flat-square)](https://devops-grafana.dmiruke.dev/)
 
 > AI-powered multi-agent platform that converts natural language into production-ready Terraform, CI/CD pipelines, and IAM policies — with deterministic OPA safety gates, confidence-tracked intent, Tree-of-Thought FinOps scoring, and human-in-the-loop approval.
 
@@ -123,8 +117,7 @@
 | **Stack** | LangGraph · FastAPI · Terraform · OPA (Rego) · OpenTelemetry · Prometheus · Grafana · Jaeger · Redis |
 | **Patterns** | 4-band confidence intent · OPA intent gate (injection + IAM + SG) · 15-type error classifier · Tree-of-Thought FinOps · blast-radius HITL approval |
 | **Tests** | 426 passing · 5 sprints complete |
-| **API (Swagger UI)** | [http://37.27.97.75:8000/docs](http://37.27.97.75:8000/docs) |
-| **Grafana** | [http://37.27.97.75:3010/](http://37.27.97.75:3010/) — anon viewer · admin `admin/devops123` |
+| **Grafana** | [devops-grafana.dmiruke.dev](https://devops-grafana.dmiruke.dev/) — anon viewer |
 | **Showcase repo** | [github.com/dmiruke-ai/agenticdevops-public](https://github.com/dmiruke-ai/agenticdevops-public) |
 
 ---
